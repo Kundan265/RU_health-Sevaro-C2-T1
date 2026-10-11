@@ -91,7 +91,10 @@ def detect(state: dict, ref: dict, coverage: dict) -> list[dict]:
                   f"{'Unassigned' if unassigned else pnames.get(holder, holder)}",
             why=reasons, score_extra=score, consult_id=c.consult_id, hospital_id=c.hospital_id,
             physician_id=None if unassigned else holder, consult_type=c.consult_type,
-            stage=c.current_stage, minutes_since_received=c.minutes_since_received))
+            stage=c.current_stage, minutes_since_received=c.minutes_since_received,
+            stage_entered_at=c.stage_entered_at, minutes_in_stage=c.stage_minutes_exact,
+            note_clock_start=c.note_clock_start, routing_failures=c.routing_failures,
+            prior_physicians=c.prior_physicians, routing_history=c.routing_history))
 
     # ---- physician-level problems ----
     for pid, p in phys.iterrows():

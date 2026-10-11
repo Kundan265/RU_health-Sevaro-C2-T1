@@ -1,0 +1,15 @@
+{
+  "python": "3.11.15",
+  "environment": "fresh Python virtual environment in isolated publication copy; no sibling data directories",
+  "dependency_check": "passed",
+  "verification_scripts": 13,
+  "verification_scripts_passed": 13,
+  "focused_regression_scenarios": 9,
+  "ui_assertions": 30,
+  "repository_root_browser_startup": "passed",
+  "model_examples": "vendored fixtures, no training-workspace dependency",
+  "original_research_data_models_benchmark_preserved": 59,
+  "token_pattern_scan": "no matches in publication files; not a comprehensive security audit",
+  "human_timing_results": "not collected",
+  "cloud_deployment": "pending"
+}

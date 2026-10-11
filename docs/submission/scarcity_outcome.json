@@ -1,0 +1,28 @@
+{
+  "scenario": "controlled synthetic events, actual supplied credentials retained",
+  "consult_id": "CON-2200",
+  "hospital_id": "SYN-012",
+  "previous_load_only_choice": "PHY-001",
+  "current_choice": "PHY-003",
+  "candidates": [
+    {
+      "physician_id": "PHY-003",
+      "scarcity_cost": 1,
+      "scarce_hospitals": [
+        "SYN-005"
+      ],
+      "open_consults": 3,
+      "consults_this_shift": 14
+    },
+    {
+      "physician_id": "PHY-001",
+      "scarcity_cost": 2,
+      "scarce_hospitals": [
+        "SYN-006",
+        "SYN-008"
+      ],
+      "open_consults": 1,
+      "consults_this_shift": 12
+    }
+  ]
+}

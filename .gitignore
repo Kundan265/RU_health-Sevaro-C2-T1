@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local artifacts excluded from public submission
+.DS_Store
+Thumbs.db
+.env.*
+!.env.example
+dashboard/logs/*.jsonl
+verification-output/

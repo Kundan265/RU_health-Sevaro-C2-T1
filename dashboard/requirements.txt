@@ -1,2 +1,7 @@
-pandas>=2.2
-streamlit>=1.45
+# Verified Python 3.11 runtime; preserve scikit-learn compatibility with saved models.
+streamlit==1.65.0
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
+joblib==1.6.0
+scipy==1.17.1

@@ -1,0 +1,172 @@
+{
+  "checks": [
+    {
+      "check": "clean startup",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "reference clock",
+      "status": "pass"
+    },
+    {
+      "check": "Clinical Lead default",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "paused rerun retains clock",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "pending approval only",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "pending offer retains its required approver",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "explicit approver configuration remains selected",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "approved simulated send",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "accept updates coverage",
+      "status": "pass"
+    },
+    {
+      "check": "future gaps cleared",
+      "status": "pass"
+    },
+    {
+      "check": "staffing has no fictitious consult handoff",
+      "status": "pass"
+    },
+    {
+      "check": "joiner protection shown in interface",
+      "status": "pass"
+    },
+    {
+      "check": "accepted shift restricted to gap and waiting hospitals",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "real problem offers reassignment",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "handoff pending",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "handoff overdue visible",
+      "status": "pass"
+    },
+    {
+      "check": "no UI exception",
+      "status": "pass"
+    },
+    {
+      "check": "handoff acknowledgment visible",
+      "status": "pass"
+    },
+    {
+      "check": "explicit advance",
+      "status": "pass"
+    }
+  ],
+  "count": 30,
+  "tabs": [
+    "\ud83e\udded Operations coordinator",
+    "\ud83e\ude7a Clinical Lead (0)",
+    "\ud83d\udcf1 Off-shift neurologist (0)",
+    "\ud83d\udcdc Audit log",
+    "\ud83d\udcca Compare"
+  ],
+  "evidence_type": "Streamlit AppTest; supplied-event injection, not browser upload",
+  "handoff": {
+    "id": "HND-0002",
+    "packet": {
+      "consult_id": "CON-2112",
+      "task_id": "TSK-N-2112-Ima",
+      "task_type": "imaging_review",
+      "stage": "Imaging Review",
+      "consult_type": "Stroke",
+      "hospital_id": "SYN-005",
+      "stage_entered_at": "2026-03-17T18:04:50-04:00",
+      "minutes_in_stage": 15.166666666666666,
+      "critical_deadline_min": 12,
+      "remaining_deadline_min": -3.166666666666666,
+      "from_physician_id": "PHY-006",
+      "to_physician_id": "PHY-005",
+      "handoff_reason": "Coordinator reassignment",
+      "prior_physicians": [
+        "PHY-006"
+      ],
+      "routing_attempts": 0,
+      "routing_history": [
+        {
+          "event_id": "EVT-01105",
+          "event_time": "2026-03-17T17:52:00-04:00",
+          "event_type": "physician_assigned",
+          "physician_id": "PHY-006"
+        }
+      ],
+      "packet_created_at": "2026-03-17T18:20:00-04:00",
+      "ack_deadline_min": 1.0,
+      "deadline_clock_start": "2026-03-17T18:04:50-04:00"
+    },
+    "status": "acknowledged",
+    "created_at": "2026-03-17 18:20:00-04:00",
+    "ack_due_at": "2026-03-17 18:21:00-04:00",
+    "acknowledged_at": "2026-03-17 18:25:00-04:00",
+    "acknowledged_by": "PHY-005",
+    "late": true
+  }
+}

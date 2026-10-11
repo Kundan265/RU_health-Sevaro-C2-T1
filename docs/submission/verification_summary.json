@@ -1,0 +1,15 @@
+{
+  "original_check_scripts": "11/11 pass",
+  "focused_regression_scenarios": "9/9 pass",
+  "Streamlit_AppTest_assertions": "30/30 pass",
+  "reference_snapshot": "18 consults, 8 physicians, 0 mismatches",
+  "actual_browser_upload": "original, same-name/same-size changed bytes, invalid batch, repeated content pass",
+  "model_bundles": "9/9 load; response and wait saved examples exact; other outputs range checked",
+  "dependency_check": "No broken requirements found",
+  "human_task_times": "not collected",
+  "personal_demo_rehearsal": "not measured",
+  "reviewer_score": 90,
+  "official_weights": false,
+  "ML_live_estimates": "suppressed for incomplete/unvalidated features",
+  "protected_original_files": 2106
+}

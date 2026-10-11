@@ -2,6 +2,8 @@
 
 Run:  python test_e2e.py
 """
+import json
+
 import pandas as pd
 
 from engine.act import ActionStore
@@ -19,11 +21,11 @@ def mins(n):
 
 
 def propose_top_split(store, now, events=EVENTS):
-    a = analyze(events, REF, now, store.accepted_shifts, store.offer_counts())
+    a = analyze(events, REF, now, store.accepted_shifts, store.offer_counts(now))
     gap = next(p for p in a["problems"] if p["rec"]["action"] == "split_shift")
     elig = a["eligibility"]
     cand = elig[elig["physician_id"] == gap["rec"]["target"]].iloc[0]
-    return store.propose_split_shift(gap, cand, a["eligibility"], HOSP, now)
+    return store.propose_split_shift(gap, cand, a["eligibility"], HOSP, now, "Ops Lead")
 
 
 def test_detect_and_decide():
@@ -48,21 +50,29 @@ def test_full_loop_closes_gap():
     s = ActionStore()
     o = propose_top_split(s, NOW)
     assert "CON-" not in o["message"] and "stroke" not in o["message"].lower()
-    s.approve(o["id"], mins(1))
+    s.approve(o["id"], mins(1), "Ops Lead")
     assert o["status"] == "sent"
     assert s.respond(o["id"], True, mins(3)).startswith("Accepted")
-    a = analyze(EVENTS, REF, mins(3), s.accepted_shifts, s.offer_counts())
+    a = analyze(EVENTS, REF, mins(3), s.accepted_shifts, s.offer_counts(mins(3)))
     assert not [p for p in a["problems"] if p["kind"] == "gap"], "gaps should be filled"
     actions = list(s.log_frame()["action"])
-    assert actions == ["proposed_split_shift", "approved", "offer_sent_simulated", "accepted"]
+    assert actions == [
+        "proposed_split_shift", "coverage_context",
+        "approved", "offer_sent_simulated",
+        "accepted", "coverage_activated",
+    ]
+    assert o["approver"] == "Ops Lead"
+    contexts = [json.loads(r["details"]) for r in s.log if r["action"] == "coverage_context"]
+    assert contexts[0]["coverage_context"]["hospitals"] == o["hospitals"]
+    assert not s.handoffs, "A staffing offer must not create a fictitious patient handoff"
 
 
 def test_decline_leads_to_escalation():
     s = ActionStore()
     o = propose_top_split(s, NOW)
-    s.approve(o["id"], mins(1))
+    s.approve(o["id"], mins(1), "Ops Lead")
     s.respond(o["id"], False, mins(2))
-    a = analyze(EVENTS, REF, mins(2), s.accepted_shifts, s.offer_counts())
+    a = analyze(EVENTS, REF, mins(2), s.accepted_shifts, s.offer_counts(mins(2)))
     gap = next(p for p in a["problems"] if p["kind"] == "gap")
     assert gap["rec"]["action"] == "escalate", "nobody else qualifies, so escalate instead of bending a rule"
 
@@ -82,7 +92,7 @@ def test_timers_and_double_accept():
     o2 = dict(o1, id="OFR-9999", physician_id="PHY-X", physician_name="Second doctor", status="sent",
               expires_at=mins(30))
     s2.proposals[o2["id"]] = o2
-    s2.approve(o1["id"], mins(1))
+    s2.approve(o1["id"], mins(1), "Ops Lead")
     s2.respond(o1["id"], True, mins(2))
     assert "already been filled" in s2.respond(o2["id"], True, mins(2))
 

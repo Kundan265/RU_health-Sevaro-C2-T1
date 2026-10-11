@@ -11,13 +11,17 @@ Split-shift offer lifecycle:
 import itertools
 import json
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
+
+from .pathway import create_task_for_stage
 
 APPROVAL_TIMEOUT_MIN = 5
 OFFER_EXPIRY_MIN = 10
 OPEN_STATUSES = {"pending_approval", "pending_backup", "sent"}
 PHI_MARKERS = ("CON-", "stroke", "patient", "NIHSS")
+DEFAULT_AUDIT_PATH = Path(__file__).resolve().parents[1] / "logs" / "audit.jsonl"
 
 
 def build_offer_message(hospital_names: list[str], start, end, online_at) -> str:
@@ -30,18 +34,40 @@ def build_offer_message(hospital_names: list[str], start, end, online_at) -> str
     return msg
 
 
+def _consult_from_problem(problem: dict, extra: dict | None = None) -> dict:
+    extra = extra or {}
+    hid = problem.get("hospital_id") or extra.get("hospital_id") or ""
+    if not hid and extra.get("hospitals"):
+        hid = extra["hospitals"][0]
+    return {
+        "consult_id": problem.get("consult_id") or extra.get("consult_id") or problem.get("problem_id", ""),
+        "hospital_id": hid,
+        "consult_type": problem.get("consult_type") or extra.get("consult_type") or "General Neuro",
+        "current_stage": problem.get("stage") or extra.get("stage") or "Triaged",
+        "physician_id": problem.get("physician_id") or extra.get("physician_id") or "Unassigned",
+        "minutes_in_stage": problem.get("minutes_in_stage", 0.0) or 0.0,
+        "stage_entered_at": problem.get("stage_entered_at") or extra.get("stage_entered_at"),
+        "routing_failures": problem.get("routing_failures", 0) or 0,
+        "note_clock_start": problem.get("note_clock_start"),
+        "prior_physicians": problem.get("prior_physicians", []),
+        "routing_history": problem.get("routing_history", []),
+    }
+
+
 class ActionStore:
-    def __init__(self):
+    def __init__(self, audit_path: Path | None = DEFAULT_AUDIT_PATH):
         self.proposals: dict[str, dict] = {}
         self.log: list[dict] = []
         self.synthetic_events: list[dict] = []
         self.accepted_shifts: list[dict] = []
+        self.handoffs: dict[str, dict] = {}
         self.alerted: set[str] = set()
         self._ids = itertools.count(1)
+        self.audit_path = audit_path
 
     # ---------- logging ----------
     def _log(self, now, actor, action, proposal=None, **details):
-        self.log.append({
+        row = {
             "sim_time": now.strftime("%H:%M:%S"), "logged_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "actor": actor, "action": action,
             "proposal_id": proposal["id"] if proposal else "",
@@ -49,7 +75,16 @@ class ActionStore:
             "physician_id": (proposal or {}).get("physician_id") or details.pop("physician_id", ""),
             "hospitals": ", ".join((proposal or {}).get("hospitals", [])) or details.pop("hospitals", ""),
             "details": json.dumps(details, default=str),
-        })
+        }
+        self.log.append(row)
+        self._persist(row)
+
+    def _persist(self, row: dict) -> None:
+        if self.audit_path is None:
+            return
+        self.audit_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.audit_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, default=str) + "\n")
 
     def log_frame(self) -> pd.DataFrame:
         return pd.DataFrame(self.log, columns=["sim_time", "logged_at", "actor", "action", "proposal_id",
@@ -60,15 +95,28 @@ class ActionStore:
         return next((p for p in self.proposals.values()
                      if p["problem_id"] == problem_id and p["status"] in OPEN_STATUSES), None)
 
-    def offer_counts(self) -> dict:
+    def offer_counts(self, now=None) -> dict:
+        """week = created in the last 7 days; declined_today = last 24 hours.
+
+        If ``now`` is omitted, use the latest proposal created_at so scenario-clock
+        callers still window correctly.
+        """
+        times = [p.get("created_at") for p in self.proposals.values() if p.get("created_at") is not None]
+        if now is None:
+            now = max(times) if times else pd.Timestamp.now()
+        week_ago = now - pd.Timedelta(days=7)
+        day_ago = now - pd.Timedelta(hours=24)
         counts: dict[str, dict] = {}
         for p in self.proposals.values():
             if p["kind"] != "split_shift":
                 continue
+            created = p.get("created_at")
             c = counts.setdefault(p["physician_id"], {"open": 0, "week": 0, "declined_today": 0})
             c["open"] += p["status"] in OPEN_STATUSES
-            c["week"] += p["status"] not in {"pending_approval", "pending_backup", "rejected"}
-            c["declined_today"] += p["status"] in {"declined", "expired"}
+            if created is not None and created >= week_ago:
+                c["week"] += p["status"] not in {"pending_approval", "pending_backup", "rejected"}
+            if created is not None and created >= day_ago:
+                c["declined_today"] += p["status"] in {"declined", "expired"}
         return counts
 
     def pending_approvals(self) -> list[dict]:
@@ -76,6 +124,27 @@ class ActionStore:
 
     def sent_offers(self) -> list[dict]:
         return [p for p in self.proposals.values() if p["kind"] == "split_shift" and p["status"] == "sent"]
+
+    def _log_handoff_packet(self, now, actor: str, problem: dict, to_pid: str,
+                            reason: str, proposal=None, extra=None):
+        packet = create_task_for_stage(_consult_from_problem(problem, extra), to_pid, reason, now)
+        self._log(now, actor, "context_packet", proposal, context_packet=packet.to_dict(),
+                  ack_deadline_min=packet.ack_deadline_min, to_physician=to_pid)
+        hid = f"HND-{next(self._ids):04d}"
+        self.handoffs[hid] = {"id": hid, "packet": packet.to_dict(), "status": "pending",
+                             "created_at": now, "ack_due_at": now + pd.Timedelta(minutes=packet.ack_deadline_min)}
+        return packet
+
+    def acknowledge_handoff(self, handoff_id: str, physician_id: str, now):
+        handoff = self.handoffs[handoff_id]
+        if physician_id != handoff["packet"]["to_physician_id"]:
+            raise ValueError("Only the receiving physician can acknowledge this simulated handoff")
+        if handoff["status"] == "acknowledged":
+            return
+        late = now > handoff["ack_due_at"]
+        handoff.update(status="acknowledged", acknowledged_at=now, acknowledged_by=physician_id, late=late)
+        self._log(now, physician_id, "handoff_acknowledged", handoff_id=handoff_id,
+                  consult_id=handoff["packet"]["consult_id"], late=late)
 
     # ---------- automatic, low-risk ----------
     def auto_alert(self, problem: dict, now):
@@ -93,12 +162,13 @@ class ActionStore:
             "hospital_id": problem["hospital_id"], "description": "Consult reassigned by coordinator"})
         self._log(now, "Coordinator", "reassigned", physician_id=to_pid, hospitals=problem["hospital_id"],
                   consult_id=cid, from_physician=problem.get("physician_id") or "Unassigned")
+        self._log_handoff_packet(now, "Coordinator", problem, to_pid, "Coordinator reassignment")
         if problem.get("physician_id"):
             self._log(now, "System", "informed_original_physician", physician_id=problem["physician_id"],
                       consult_id=cid, note="Informed after reassignment (mentor answer Q2)")
 
     def propose_split_shift(self, problem: dict, candidate: dict, eligibility_df: pd.DataFrame,
-                            hospital_names: dict, now) -> dict:
+                            hospital_names: dict, now, approver_role: str) -> dict:
         hosp = list(candidate["covers"])
         p = {"id": f"OFR-{next(self._ids):04d}", "kind": "split_shift", "problem_id": problem["problem_id"],
              "title": f"Split shift for {', '.join(hospital_names[h] for h in hosp)}",
@@ -111,26 +181,40 @@ class ActionStore:
              "considered": [{"physician_id": r.physician_id, "eligible": r.eligible,
                              "failed": [f"{k}: {r.rules[k][1]}" for k in r.failed_rules]}
                             for r in eligibility_df.itertuples()],
-             "status": "pending_approval", "created_at": now, "approver": "Clinical lead"}
+             "status": "pending_approval", "created_at": now, "approver": approver_role,
+             "source_problem": {
+                 "problem_id": problem.get("problem_id"),
+                 "consult_id": problem.get("consult_id"),
+                 "hospital_id": problem.get("hospital_id"),
+                 "consult_type": problem.get("consult_type"),
+                 "stage": problem.get("stage"),
+                 "physician_id": problem.get("physician_id"),
+             }}
         self.proposals[p["id"]] = p
         self._log(now, "Coordinator", "proposed_split_shift", p, considered=p["considered"],
-                  window=f"{p['start']:%H:%M}-{p['end']:%H:%M}")
+                  window=f"{p['start']:%H:%M}-{p['end']:%H:%M}", approver=approver_role)
+        p["coverage_context"] = {"hospitals": hosp, "online_at": candidate["online_at"],
+                                 "end": candidate["offer_end"], "routing_restricted": True}
+        self._log(now, "Coordinator", "coverage_context", p, coverage_context=p["coverage_context"])
         return p
 
-    def propose_escalation(self, problem: dict, now) -> dict:
+    def propose_escalation(self, problem: dict, now, approver_role: str) -> dict:
         p = {"id": f"ESC-{next(self._ids):04d}", "kind": "escalate", "problem_id": problem["problem_id"],
              "title": problem["title"], "physician_id": "", "hospitals": [problem.get("hospital_id") or ""],
              "rationale": problem["why"] + problem["rec"]["why_not"], "status": "pending_approval",
-             "created_at": now, "approver": "Clinical lead"}
+             "created_at": now, "approver": approver_role}
         self.proposals[p["id"]] = p
-        self._log(now, "Coordinator", "escalated", p, problem=problem["title"])
+        self._log(now, "Coordinator", "escalated", p, problem=problem["title"], approver=approver_role)
         return p
 
-    # ---------- clinical lead / backup ----------
-    def approve(self, pid: str, now, by: str = "Clinical lead"):
+    # ---------- configured approver / backup ----------
+    def approve(self, pid: str, now, by: str):
         p = self.proposals[pid]
         if p["status"] not in {"pending_approval", "pending_backup"}:
             return
+        expected = p["approver"]
+        if by != expected and not (p["status"] == "pending_backup" and by.startswith("Backup approver")):
+            raise ValueError(f"Approval requires {expected}")
         self._log(now, by, "approved", p)
         if p["kind"] == "split_shift":
             p.update(status="sent", sent_at=now, expires_at=now + pd.Timedelta(minutes=OFFER_EXPIRY_MIN),
@@ -139,7 +223,7 @@ class ActionStore:
         else:
             p.update(status="authorized", approved_by=by)
 
-    def reject(self, pid: str, now, by: str = "Clinical lead", reason: str = ""):
+    def reject(self, pid: str, now, by: str, reason: str = ""):
         p = self.proposals[pid]
         p["status"] = "rejected"
         self._log(now, by, "rejected", p, reason=reason)
@@ -172,6 +256,8 @@ class ActionStore:
                                      "end": p["end"], "hospitals": p["hospitals"]})
         self._log(now, p["physician_name"], "accepted", p, online_at=f"{p['online_at']:%H:%M}",
                   routing_limited_to=p["hospitals"])
+        self._log(now, p["physician_name"], "coverage_activated", p,
+                  coverage_context=p["coverage_context"])
         for other in self.proposals.values():  # stop asking once the gap is filled
             if other is not p and other["kind"] == "split_shift" and other["status"] in OPEN_STATUSES \
                     and set(other["hospitals"]) <= set(p["hospitals"]):
@@ -181,6 +267,12 @@ class ActionStore:
 
     # ---------- timers ----------
     def tick(self, now):
+        for handoff in self.handoffs.values():
+            if handoff["status"] == "pending" and now > handoff["ack_due_at"]:
+                handoff["status"] = "overdue"
+                self._log(now, "System", "handoff_ack_overdue", handoff_id=handoff["id"],
+                          consult_id=handoff["packet"]["consult_id"],
+                          to_physician=handoff["packet"]["to_physician_id"])
         for p in self.proposals.values():
             if p["status"] == "pending_approval" and now >= p["created_at"] + pd.Timedelta(minutes=APPROVAL_TIMEOUT_MIN):
                 p.update(status="pending_backup", approver="Backup approver (leadership chain)")

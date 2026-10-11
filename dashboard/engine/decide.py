@@ -10,18 +10,26 @@ MAX_HOURS_7D = 60
 MIN_OFFER_VALUE_H = 2
 MAX_OFFERS_WEEK = 3
 
-# RACI per intervention (mentor answers, see DECISIONS.md)
-RACI = {
-    "reassign":    {"R": "Coordinator", "A": "Coordinator (no approval needed)", "C": "—",
-                    "I": "Original physician (after), Quality Leadership"},
-    "split_shift": {"R": "Coordinator", "A": "Clinical lead", "C": "Ops Leadership",
-                    "I": "Quality Leadership"},
-    "escalate":    {"R": "Coordinator", "A": "Clinical lead", "C": "Ops Leadership",
-                    "I": "Quality Leadership"},
-    "alert":       {"R": "System (automatic)", "A": "—", "C": "—", "I": "Coordinator"},
-}
+# RACI per intervention (client answers + mentor answers, see DECISIONS.md)
+# Challenge default approver is Clinical Lead; Ops Lead is an explicit alternative.
+APPROVER_ROLE = "Clinical Lead"  # Can be "Ops Lead" or "Clinical Lead"
+
+def get_raci(approver_role: str = None) -> dict:
+    """Return RACI dict with the specified approver role."""
+    role = approver_role or APPROVER_ROLE
+    return {
+        "reassign":    {"R": "Coordinator", "A": "Coordinator (no approval needed)", "C": "—",
+                        "I": "Original physician (auto), Quality Leadership"},
+        "split_shift": {"R": "Coordinator", "A": role, "C": "—",
+                        "I": "Clinical Lead, Quality Leadership" if role == "Ops Lead" else "Ops Lead, Quality Leadership"},
+        "escalate":    {"R": "Coordinator", "A": role, "C": "—",
+                        "I": "Clinical Lead, Quality Leadership" if role == "Ops Lead" else "Ops Lead, Quality Leadership"},
+        "alert":       {"R": "System (automatic)", "A": "—", "C": "—", "I": "Coordinator"},
+    }
+
+RACI = get_raci()  # Default RACI
 ACTION_LABEL = {"reassign": "Reassign consult", "split_shift": "Offer split shift",
-                "escalate": "Escalate to clinical lead", "alert": "Internal alert (automatic)"}
+                "escalate": "Escalate to ops lead", "alert": "Internal alert (automatic)"}
 
 
 def offer_window(now: pd.Timestamp, hours: float = OFFER_HOURS):
@@ -95,7 +103,26 @@ def reassign_candidates(state: dict, ref: dict, hospital_id: str, exclude: str |
     cred = set(ref["credentials"].loc[ref["credentials"]["hospital_id"] == hospital_id, "physician_id"])
     c = phys[phys["physician_id"].isin(cred) & phys["available_for_routing"]
              & (phys["physician_id"] != exclude) & (phys["minutes_to_shift_end"] > 30)]
-    return c.sort_values(["open_consults", "consults_this_shift"])
+    c = c.copy()
+    at_risk = set()
+    coverage = state.get("coverage")
+    if coverage is not None:
+        at_risk |= set(coverage["summary"].loc[coverage["summary"].first_gap.notna(), "hospital_id"])
+        current = coverage["grid"].dropna(subset=["short_now"])
+        at_risk |= set(current.loc[current.short_now.astype(bool), "hospital_id"])
+    waiting = state["consults"]
+    at_risk |= set(waiting.loc[(waiting.physician_id == "Unassigned") | (waiting.routing_failures > 0), "hospital_id"])
+    at_risk.discard(hospital_id)
+    remaining = phys[phys.available_for_routing & (phys.minutes_to_shift_end > 30)]
+    sole = {}
+    for hid in sorted(at_risk):
+        privileged = set(ref["credentials"].loc[ref["credentials"].hospital_id == hid, "physician_id"])
+        choices = set(remaining.physician_id) & privileged
+        if len(choices) == 1:
+            sole[hid] = next(iter(choices))
+    c["scarce_hospitals"] = c.physician_id.map(lambda pid: [hid for hid, owner in sole.items() if owner == pid])
+    c["scarcity_cost"] = c.scarce_hospitals.map(len)
+    return c.sort_values(["scarcity_cost", "open_consults", "consults_this_shift", "physician_id"])
 
 
 def _why_not_busy(state, ref, hospital_id, exclude):
@@ -105,13 +132,14 @@ def _why_not_busy(state, ref, hospital_id, exclude):
     return [f"{r.physician_id}: {r.derived_state}" for r in rows.itertuples()]
 
 
-def recommend(problem: dict, state: dict, ref: dict, elig: pd.DataFrame) -> dict:
+def recommend(problem: dict, state: dict, ref: dict, elig: pd.DataFrame, approver_role: str = None) -> dict:
     kind = problem["kind"]
     pnames = pd.concat([ref["on_shift"], ref["off_shift"]]).set_index("physician_id")["name"].to_dict()
     eligible = elig[elig["eligible"]]
     # A doctor whose only "failure" is the offer already pending for this gap is still the plan.
     planned = elig[elig["eligible"] | (elig["offer_open"] & elig["failed_rules"].apply(lambda f: f == ["Offer limits"]))]
     rec = {"action": "alert", "target": None, "detail": "", "rationale": [], "why_not": []}
+    raci = get_raci(approver_role)
 
     def split_or_escalate(hid):
         top = planned[planned["covers"].apply(lambda c: hid in c)]
@@ -142,6 +170,10 @@ def recommend(problem: dict, state: dict, ref: dict, elig: pd.DataFrame) -> dict
                            detail=f"Reassign {problem['consult_id']} to {pnames.get(c['physician_id'])}")
                 rec["rationale"].append(f"{pnames.get(c['physician_id'])} is credentialed here, "
                                         f"{c['derived_state'].lower()}, {c['open_consults']} open consults")
+                rec["candidates"] = cands[["physician_id", "scarcity_cost", "scarce_hospitals",
+                                            "open_consults", "consults_this_shift"]].to_dict("records")
+                rec["rationale"].append(f"Credential preservation cost {c['scarcity_cost']}: "
+                    "fewest other at-risk hospitals losing their last eligible alternative; then load and stable ID")
                 rec["why_not"].append("Split shift is slower (offer, approval, time to get online)")
                 if holder:
                     rec["rationale"].append(f"{pnames.get(holder, holder)} will be informed after the move")
@@ -171,7 +203,8 @@ def recommend(problem: dict, state: dict, ref: dict, elig: pd.DataFrame) -> dict
     elif kind == "data":
         rec.update(action="alert", detail="Check the event feed")
 
-    rec["label"] = ACTION_LABEL[rec["action"]]
-    rec["raci"] = RACI[rec["action"]]
-    rec["approver"] = RACI[rec["action"]]["A"]
+    rec["label"] = (f"Escalate to {raci['escalate']['A'].lower()}" if rec["action"] == "escalate"
+                    else ACTION_LABEL[rec["action"]])
+    rec["raci"] = raci[rec["action"]]
+    rec["approver"] = raci[rec["action"]]["A"]
     return rec

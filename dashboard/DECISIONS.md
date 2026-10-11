@@ -1,29 +1,40 @@
 # Design decisions
 
-Rules the engine and dashboard follow, with their source. HB = Challenge 2 Handbook, Brief = Challenge 2 brief v2, Mentor = Sevaro mentor answers (10 Oct 2026).
+Rules the engine and dashboard follow, with their source. HB = Challenge 2 Handbook, Brief = Challenge 2 brief v2, Mentor = Sevaro mentor answers (10 Oct 2026), Client = clarification answers (11 Oct 2026).
 
-## RACI per intervention (Mentor Q1, Q2, Q3, Q6)
+## RACI per intervention (Client Answers #2, Mentor Q1, Q2, Q3, Q6)
 
 | Intervention | Responsible | Accountable (approves) | Consulted | Informed |
 |---|---|---|---|---|
 | Internal alert | System (automatic) | none | none | Coordinator |
-| Reassign consult | Coordinator | Coordinator (no approval) | none | Original physician (after), Quality Leadership |
-| Split-shift offer | Coordinator (proposes) | Clinical lead (sole approver) | Ops Leadership | Quality Leadership |
-| Escalation | Coordinator | Clinical lead (authorizes) | Ops Leadership | Quality Leadership |
+| Reassign consult | Coordinator | Coordinator (no approval) | none | Original physician (auto, after), Quality Leadership |
+| Split-shift offer | Coordinator (proposes) | **Ops Lead on Duty** (default, configurable) | none | Clinical Lead, Quality Leadership |
+| Escalation | Coordinator | **Ops Lead on Duty** (default, configurable) | none | Clinical Lead, Quality Leadership |
 | Approval not answered in time | System | Next tier in the leadership chain | none | Coordinator |
 
-- The original physician is **told after** a reassignment. They are not asked first. (Mentor Q2)
-- The clinical lead approves split shifts **without input from anyone else**. (Mentor Q3)
-- If the clinical lead doesn't respond in time, the request **moves up the chain of command**. The demo uses a timer that escalates to a "backup approver". (Mentor Q5)
+**Key changes from brief default (Client Answer #2):**
+- **Ops Leaders are the real-time decision makers.** They approve split-shift offers and authorize escalations.
+- **Clinical Leaders are informed**, not consulted. They analyze patterns and make forward-looking changes, not real-time calls.
+- The approver role is **configurable** via a sidebar toggle. Flip to "Clinical Lead" if challenged by a judge; the brief's exact wording is quoted in the tooltip.
+
+## Coverage gaps handled uniformly (Client Answer #1)
+- **A coverage gap triggers the same intervention whether the waiting consults are Stroke or General Neuro.**
+- Consult type affects only the time thresholds (Stroke clocks are tighter), never the intervention path.
+- A gap affecting only General Neuro consults **still triggers a split-shift offer**, not just an alert.
+
+## Offer log = structured event log (Client Answer #3, Mentor Q7)
+- Every offer status change is recorded as **its own timestamped event**: proposed, approved, rejected, sent, accepted, declined, expired, superseded, cancelled_gap_filled.
+- This drives real-time paging triggers, auditing, and process-improvement analysis.
+- Each record holds: who was considered, who was excluded and why, the approver, timestamps, and the outcome (HB p.15).
+
+## Original physician auto-notified (Client Answer #4, Mentor Q2)
+- When a consult is reassigned, the original physician is **automatically notified** with only the consult ID and time.
+- Example: "CON-2110 was reassigned from you at 18:25."
+- No coordinator confirmation required; the notice is sent immediately upon reassignment.
 
 ## Hospitals are not in the loop (Mentor Q4)
-- Hospitals are not told about reassignments or incoming doctors. Live insight is for Sevaro clinical and ops leadership only.
+- Hospitals are not told about reassignments or incoming doctors. Live insight is for clinical and ops leadership only.
 - Hospitals see who completed a consult only in a monthly report. **No hospital-facing notifications.**
-
-## Offer log = structured event log (Mentor Q7)
-- It is used for auditing, for process-improvement analysis, **and** as triggers for messaging and paging systems.
-- So it is append-only, machine-readable records (one row per state change: proposed, approved/rejected, sent, accepted/declined/expired, superseded), not free text.
-- Each record holds: who was considered, who was excluded and why, the approver, timestamps and the outcome (HB p.15).
 
 ## Root cause to frame the pitch around (Mentor Q8)
 - The main problem is **staffing during unforeseen surges concentrated in a few hospital systems, where credentialing limits who can help.**
@@ -34,7 +45,8 @@ Rules the engine and dashboard follow, with their source. HB = Challenge 2 Handb
 
 | Question | Default in code | Where |
 |---|---|---|
-| N3: what is "now" after new data? | `max(18:20, latest event_time)`, plus the +1/+5 min clock buttons | `app.py: base_now()` |
+| N3: what is "now" after new data? | `max(wall clock, latest event_time)`, plus the +1/+5 min clock buttons | `app.py: base_now()` |
+| N3a: how does the sample day reach the wall clock? | The session pins the sample's 18:20 anchor to the moment it starts and shifts all five time-bearing surfaces by that one delta, so the scenario plays live | `engine/rebase.py` |
 | N4: do scheduled night starts count? | Yes, from their start time (12 h shift) | `coverage.py: shift_roster()` |
 | N1: repeat calls | Dedupe only by `event_id`; never merge different `consult_id`s | `replay.py` |
 | B5: fresh approval after a decline? | Yes. A decliner is excluded for the day, and the next candidate needs a new approval. Nobody left → escalate | `decide.py`, `act.py` |

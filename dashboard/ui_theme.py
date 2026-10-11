@@ -1,7 +1,7 @@
-"""Sevaro-style look for the Streamlit app (font, colours, cards, pill buttons, header).
+"""Neutral theme for the Neuro Ops Command Center Streamlit app.
 
-Brand tokens taken from sevaro.com: Nunito Sans, navy ink #111B29, slate body #677489,
-eyebrow grey #97A3B7, surface #F4F5F7, accent gradient teal #24C3B8 -> indigo #5D5DE5.
+Uses Nunito Sans, navy ink #111B29, slate body #677489, eyebrow grey #97A3B7,
+surface #F4F5F7, accent gradient teal #24C3B8 -> indigo #5D5DE5.
 Status colours (critical red / warning amber) are kept separate and always paired
 with an icon + label, so brand colour never carries alert meaning.
 """
@@ -97,13 +97,13 @@ def header(now_label: str, n_critical: int, n_short: int):
   <div class="sv-brand">
     <div class="sv-mark">🧠</div>
     <div>
-      <div class="sv-word">SEVARO</div>
-      <div class="sv-title">Tele-Neurology Operations Command Center</div>
-      <div class="sv-sub">Stroke &amp; General Neuro coverage across the hospital network · Detect → Decide → Act</div>
+      <div class="sv-word" style="color:#d03b3b;font-size:10px;">DEMO · SYNTHETIC DATA</div>
+      <div class="sv-title">Neuro Ops Command Center</div>
+      <div class="sv-sub">Tele-neurology coverage across the hospital network · Detect → Decide → Act</div>
     </div>
   </div>
   <div class="sv-chips">
-    <span class="sv-chip now">Now {now_label} ET</span>
+    <span class="sv-chip now">Sim time {now_label} ET</span>
     <span class="sv-chip">🔴 {n_critical} critical</span>
     <span class="sv-chip">▲ {n_short} hospitals short soon</span>
   </div>

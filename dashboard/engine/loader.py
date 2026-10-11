@@ -18,8 +18,18 @@ def parse_events(df: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Event file is missing columns: {sorted(missing)}")
     df = df[EVENT_COLUMNS].copy()
+    if df.empty:
+        raise ValueError("Event file contains no records")
+    for col in ("event_id", "event_type"):
+        if df[col].isna().any() or df[col].astype(str).str.strip().eq("").any():
+            raise ValueError(f"{col} is required on every record")
+        df[col] = df[col].astype(str).str.strip()
     for col in ("event_time", "ingested_at"):
-        df[col] = pd.to_datetime(df[col], utc=True).dt.tz_convert(ET)
+        if df[col].isna().any():
+            raise ValueError(f"{col} is required on every record")
+        df[col] = pd.to_datetime(df[col], utc=True, errors="raise").dt.tz_convert(ET)
+        if df[col].isna().any():
+            raise ValueError(f"{col} contains missing timestamps")
     for col in ("consult_id", "physician_id", "hospital_id", "description"):
         df[col] = df[col].fillna("").astype(str).str.strip()
     df["event_type"] = df["event_type"].str.strip()

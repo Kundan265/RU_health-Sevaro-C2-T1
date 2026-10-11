@@ -1,0 +1,100 @@
+{
+  "evidence_type": "automated verification; execution times are not human task timings",
+  "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "audit_isolation": "Default ActionStore audit disabled in test subprocesses only",
+  "results": [
+    {
+      "script": "check_snapshot.py",
+      "exit_code": 0,
+      "automated_seconds": 13.153,
+      "output": "open consults: 18 rows, 0 mismatches\nphysicians: 8 rows, 0 mismatches\n\nduplicates removed: ['EVT-00529']\nlate events (>60s): ['EVT-01161']\n\nPASS\n",
+      "stderr": ""
+    },
+    {
+      "script": "test_e2e.py",
+      "exit_code": 0,
+      "automated_seconds": 30.625,
+      "output": "PASS test_detect_and_decide\nPASS test_full_loop_closes_gap\nPASS test_decline_leads_to_escalation\nPASS test_timers_and_double_accept\nPASS test_judge_file_injection\n",
+      "stderr": "2026-10-11 08:15:50.794 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n"
+    },
+    {
+      "script": "tests/test_predictor.py",
+      "exit_code": 0,
+      "automated_seconds": 2.523,
+      "output": "============================================================\nTesting ML Models for Neuro Ops Command Center\n============================================================\n\u2713 Feature schema: 5 cat + 26 num = 31 total\n\n\u2713 demand: loaded count model\n\u2713 availability_15: loaded binary model\n\u2713 availability_60: loaded binary model\n\u2713 availability_90: loaded binary model\n\u2713 queue_wait: loaded quantiles model\n\u2713 response_sla: loaded binary model\n\u2713 stage_sla: loaded binary model\n\u2713 handoff: loaded binary model\n\u2713 escalation: loaded binary model\n\nVerifying predictions match benchmark examples...\n\u2713 response_sla: 10 predictions, max_diff=0.000000, mean_diff=0.000000\n\u2713 stage_sla: 10 predictions generated (mean=0.3830)\n\u2713 availability_15: 10 predictions generated (mean=0.0000)\n\u2713 availability_60: 10 predictions generated (mean=0.0000)\n\u2713 availability_90: 10 predictions generated (mean=0.0000)\n\u2713 queue_wait: 10 predictions, max_diff=0.000000, mean_diff=0.000000\n\u2713 demand: 10 predictions generated (mean=0.1174)\n\u2713 escalation: 10 predictions generated (mean=0.5607)\n\u2713 handoff: 10 predictions generated (mean=0.9285)\n\n============================================================\nAll tests passed! \u2713\n============================================================\n",
+      "stderr": "2026-10-11 08:16:21.133 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n<isolated-repository>/.venv311/lib/python3.11/site-packages/joblib/externals/loky/backend/context.py:134: UserWarning: Could not find the number of physical cores for the following reason:\ninvalid literal for int() with base 10: ''\nReturning the number of logical cores instead. You can silence this warning by setting LOKY_MAX_CPU_COUNT to the number of cores you want to use.\n  warnings.warn(\n  File \"<isolated-repository>/.venv311/lib/python3.11/site-packages/joblib/externals/loky/backend/context.py\", line 264, in _count_physical_cores\n    cpu_count_physical = _count_physical_cores_darwin()\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<isolated-repository>/.venv311/lib/python3.11/site-packages/joblib/externals/loky/backend/context.py\", line 420, in _count_physical_cores_darwin\n    return int(cpu_info)\n           ^^^^^^^^^^^^^\n"
+    },
+    {
+      "script": "tests/test_pathway.py",
+      "exit_code": 0,
+      "automated_seconds": 0.477,
+      "output": "============================================================\nTesting Pathway Module\n============================================================\n\u2713 All 10 stages defined\n\u2713 Stage ranks are consecutive\n\u2713 All stages map to valid task types\n\u2713 Critical clocks match benchmark\n\u2713 Warning thresholds before critical\n\u2713 Handoff ack deadlines correct\n\u2713 Context packet created correctly\n\u2713 Context packet has no PHI markers\n\u2713 Stage reassignment rules correct\n\u2713 Critical stage detection correct\n\u2713 Task type mapping correct\n\n============================================================\nAll pathway tests passed! \u2713\n============================================================\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_rank.py",
+      "exit_code": 0,
+      "automated_seconds": 0.482,
+      "output": "============================================================\nTesting Ranking Module\n============================================================\n\u2713 All hard gates pass when eligible\n\u2713 Credential gate fails when not credentialed\n\u2713 Availability gate fails when unavailable\n\u2713 Shift remaining gate fails when <10 min\n\u2713 Ineligible candidates score -inf (sort last)\n\u2713 Eligible candidates have scored components\n\u2713 Continuity bonus applied\n\u2713 Candidates ranked by score (descending)\n\u2713 Ineligible candidates ranked last\n\u2713 No scarcity cost for single-hospital credential\n\u2713 Scarcity cost for multi-hospital credential\n\u2713 Candidate summary formatted correctly\n\u2713 Hard gates never overridden (even with perfect ML)\n\n============================================================\nAll ranking tests passed! \u2713\n============================================================\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_offer_log.py",
+      "exit_code": 0,
+      "automated_seconds": 0.399,
+      "output": "============================================================\nTesting Offer Log Module\n============================================================\n\u2713 Fan-out creates 3 primary + 2 backup offers\n\u2713 Approval sends offer with expiry\n\u2713 First-accept-wins under concurrency\n\u2713 Decline promotes next backup\n\u2713 Tick expires old offers\n\u2713 Approval timeout escalates to pending_backup\n\u2713 All state changes logged as events\n\u2713 accepted_shifts returns correct format\n\u2713 Offer counts track correctly\n\u2713 Reject offer works\n\u2713 Gap filled detection works\n\n============================================================\nAll offer log tests passed! \u2713\n============================================================\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_simulator.py",
+      "exit_code": 0,
+      "automated_seconds": 0.457,
+      "output": "============================================================\nTesting Simulator Module\n============================================================\n\u2713 Clock speeds have correct multipliers\n\u2713 Simulator starts and stops correctly\n\u2713 Tick advances simulation time correctly\n\u2713 Turbo speed (60x) works correctly\n\u2713 Surge scenario generated 47 arrivals at SYN-011\n\u2713 Doctor drops scenario: PHY-004 went offline\n\u2713 Simultaneous criticals: 5 strokes at 5 hospitals\n\u2713 Same seed produces reproducible events\n\u2713 Demo scenario factory works\n\u2713 Event injection maintains chronological order\n\u2713 Status reporting works correctly\n\n============================================================\nAll simulator tests passed! \u2713\n============================================================\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_pool_sizing.py",
+      "exit_code": 0,
+      "automated_seconds": 0.401,
+      "output": "============================================================\nTesting Pool Sizing Module\n============================================================\n\u2713 Pool size respects minimum (2)\n\u2713 Pool size scales with demand\n\u2713 Flex activates on high queue\n\u2713 Flex activates when understaffed\n\u2713 Queue pressure increases recommended size\n\u2713 Stroke gets higher staffing ratio\n\u2713 Flex candidates identified and prioritized\n\u2713 Hospitals prioritized by criticality\n\u2713 Unvalidated live pool demand is explicitly unavailable\n\n============================================================\nAll pool sizing tests passed! \u2713\n============================================================\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_rebase.py",
+      "exit_code": 0,
+      "automated_seconds": 2.952,
+      "output": "============================================================\nTesting Clock Rebase Module\n============================================================\n\u2713 Delta round-trips: anchor + 207 days 06:45:00 == wall clock\n\u2713 Time-of-day shifting wraps past midnight\n\u2713 Coverage blocks shift on both ends\n\u2713 Baseline hours rotate but stay on the hour\n\u2713 Rebased stream ends 17s before now (was ~208 days)\n\u2713 rebase_reference leaves the cached reference untouched\n\u2713 All five time-bearing surfaces shift by one coherent delta\n\u2713 8 physicians stay on shift across midnight\n\u2713 Rebased clock reproduces all 15 problems identically (ranks + actions)\n\n============================================================\nAll rebase tests passed! \u2713\n============================================================\n",
+      "stderr": "2026-10-11 08:16:24.487 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n"
+    },
+    {
+      "script": "tests/test_compare_provenance.py",
+      "exit_code": 0,
+      "automated_seconds": 0.389,
+      "output": "PASS test_compare_provenance\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_rank_direction.py",
+      "exit_code": 0,
+      "automated_seconds": 0.368,
+      "output": "PASS test_rank_direction\n",
+      "stderr": ""
+    },
+    {
+      "script": "tests/test_hackathon_readiness.py",
+      "exit_code": 0,
+      "automated_seconds": 2.58,
+      "output": "",
+      "stderr": "2026-10-11 08:16:28.156 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\ntest_active_scarcity_ranking_and_hard_gates (__main__.ReadinessTests.test_active_scarcity_ranking_and_hard_gates) ... ok\ntest_context_clocks_acknowledgment_and_history (__main__.ReadinessTests.test_context_clocks_acknowledgment_and_history) ... ok\ntest_coverage_context_and_approval_gate (__main__.ReadinessTests.test_coverage_context_and_approval_gate) ... ok\ntest_features_schedule_completed_arrivals_and_suppression (__main__.ReadinessTests.test_features_schedule_completed_arrivals_and_suppression) ... ok\ntest_forecast_requirement_midnight_and_dst (__main__.ReadinessTests.test_forecast_requirement_midnight_and_dst) ... ok\ntest_forecast_shift_boundaries_and_endpoint (__main__.ReadinessTests.test_forecast_shift_boundaries_and_endpoint) ... ok\ntest_supplied_credential_event_counterexample (__main__.ReadinessTests.test_supplied_credential_event_counterexample) ... ok\ntest_upload_content_identity_idempotence_and_atomic_rejection (__main__.ReadinessTests.test_upload_content_identity_idempotence_and_atomic_rejection) ... ok\ntest_uploaded_closure_of_all_consults (__main__.ReadinessTests.test_uploaded_closure_of_all_consults) ... ok\n\n----------------------------------------------------------------------\nRan 9 tests in 2.074s\n\nOK\n"
+    },
+    {
+      "script": "tests/test_dashboard_workflow.py",
+      "exit_code": 0,
+      "automated_seconds": 6.808,
+      "output": "{\"checks\": 30, \"tabs\": [\"\\ud83e\\udded Operations coordinator\", \"\\ud83e\\ude7a Clinical Lead (0)\", \"\\ud83d\\udcf1 Off-shift neurologist (0)\", \"\\ud83d\\udcdc Audit log\", \"\\ud83d\\udcca Compare\"], \"handoff_status\": \"acknowledged\"}\n",
+      "stderr": "2026-10-11 08:16:30.594 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n2026-10-11 08:16:35.274 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n"
+    }
+  ],
+  "passed": 13,
+  "total": 13
+}

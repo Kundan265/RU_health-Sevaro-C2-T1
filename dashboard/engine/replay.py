@@ -45,6 +45,8 @@ class Consult:
     routing_failures: int = 0
     last_routing_failure: pd.Timestamp | None = None
     ringing_physician: str = ""
+    prior_physicians: list[str] = field(default_factory=list)
+    routing_history: list[dict] = field(default_factory=list)
 
     def advance(self, stage: str, at: pd.Timestamp) -> None:
         # Forward-only: a stray earlier-stage event never moves a consult backwards.
@@ -107,10 +109,15 @@ def replay(events: pd.DataFrame, ref: dict, now: pd.Timestamp,
 
         # ---- consult lifecycle ----
         if c is not None:
+            if et in ("routing_attempt_failed", "incoming_call_ringing", "physician_assigned"):
+                c.routing_history.append({"event_id": e.event_id, "event_time": t.isoformat(),
+                                          "event_type": et, "physician_id": pid or None})
             if et == "consult_received":
                 c.received_at = c.received_at or t
                 c.consult_type = "Stroke" if "stroke" in e.description.lower() else "General Neuro"
             if et == "physician_assigned":
+                if c.physician_id and c.physician_id != pid and c.physician_id not in c.prior_physicians:
+                    c.prior_physicians.append(c.physician_id)
                 c.physician_id = pid
             if et == "routing_attempt_failed":
                 c.routing_failures += 1
@@ -177,8 +184,16 @@ def _consults_frame(consults: dict[str, Consult], now) -> pd.DataFrame:
             "minutes_since_received": _minutes(now, c.received_at),
             "received_at": c.received_at, "note_clock_start": c.note_clock_start,
             "routing_failures": c.routing_failures, "ringing_physician": c.ringing_physician,
+            "prior_physicians": list(c.prior_physicians),
+            "routing_history": list(c.routing_history),
         })
-    return pd.DataFrame(rows).sort_values("consult_id").reset_index(drop=True)
+    columns = ["consult_id", "hospital_id", "physician_id", "consult_type", "current_stage",
+               "stage_entered_at", "minutes_in_stage", "minutes_since_received", "received_at",
+               "note_clock_start", "routing_failures", "ringing_physician", "prior_physicians", "routing_history"]
+    frame = pd.DataFrame(rows, columns=columns)
+    for col in ("stage_entered_at", "received_at", "note_clock_start"):
+        frame[col] = pd.to_datetime(frame[col], utc=True).dt.tz_convert(now.tz)
+    return frame.sort_values("consult_id").reset_index(drop=True)
 
 
 def _shift_window(pid, p: Physician, ref, now, extra=None):
@@ -188,9 +203,19 @@ def _shift_window(pid, p: Physician, ref, now, extra=None):
     day = now.normalize()
     if pid in on.index:
         s, e = on.loc[pid, "shift_start_et"], on.loc[pid, "shift_end_et"]
-        start = day + pd.Timedelta(s + ":00")
-        end = day + pd.Timedelta(e + ":00")
-        return start, end if end > start else end + pd.Timedelta(days=1)
+
+        def window(anchor):
+            start = anchor + pd.Timedelta(s + ":00")
+            end = anchor + pd.Timedelta(e + ":00")
+            return start, end if end > start else end + pd.Timedelta(days=1)
+
+        # A shift that crosses midnight and is live right now began yesterday, so
+        # anchoring only to today would place its start in the future and lose it.
+        for anchor in (day - pd.Timedelta(days=1), day):
+            start, end = window(anchor)
+            if start <= now < end:
+                return start, end
+        return window(day)
     if p.shift_started_at is not None:  # e.g. a night or split-shift doctor who came online
         return p.shift_started_at, p.shift_started_at + pd.Timedelta(hours=12)
     return None, None

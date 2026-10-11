@@ -1,7 +1,11 @@
 """[7] Pipeline: one stateless call that turns events into problems and fixes.
-Loading new data = calling analyze() again; nothing needs a restart."""
+Loading new data = calling analyze() again; nothing needs a restart.
+
+ML is attached after recommend() as problem["ml"] and never changes the decision.
+"""
 import pandas as pd
 
+from .advisory import annotate_problem, experimental_pools
 from .coverage import project
 from .decide import eligibility, gap_hospitals, recommend
 from .detect import detect
@@ -10,10 +14,13 @@ from .routing_sim import trap_comparison
 
 
 def analyze(events: pd.DataFrame, ref: dict, now: pd.Timestamp,
-            extra_shifts: list[dict] | None = None, offer_counts: dict | None = None) -> dict:
+            extra_shifts: list[dict] | None = None, offer_counts: dict | None = None,
+            approver_role: str | None = None) -> dict:
     extra_shifts = extra_shifts or []
     state = replay(events, ref, now, extra_shifts)
     cov = project(state, ref, extra_shifts)
+    state["coverage"] = cov
+    state["extra_shifts"] = extra_shifts
     problems = detect(state, ref, cov)
     covered = {h for s in extra_shifts for h in s["hospitals"]}
     gaps = [h for h in gap_hospitals(problems, cov) if h not in covered]
@@ -22,7 +29,9 @@ def analyze(events: pd.DataFrame, ref: dict, now: pd.Timestamp,
     elig = eligibility(ref, now, gaps, offer_counts or {})
     elig = elig[~elig["physician_id"].isin(joined)].reset_index(drop=True)
     for p in problems:
-        p["rec"] = recommend(p, state, ref, elig)
+        p["rec"] = recommend(p, state, ref, elig, approver_role)
+        # Annotation only. recommend() signature and return value stay unchanged.
+        p["ml"] = annotate_problem(p, state, ref, now)
 
     # Split-shift trap: show it for the doctor who joined, or for the top candidate.
     roles = ref["off_shift"].set_index("physician_id")["role"].to_dict()
@@ -36,6 +45,8 @@ def analyze(events: pd.DataFrame, ref: dict, now: pd.Timestamp,
     else:
         joiner = None
     trap = trap_comparison(state, ref, cov, joiner) if joiner else None
+    pools = experimental_pools(state, ref, cov)
 
     return {"now": now, "state": state, "coverage": cov, "problems": problems,
-            "gap_hospitals": gaps, "eligibility": elig, "trap": trap, "joiner": joiner}
+            "gap_hospitals": gaps, "eligibility": elig, "trap": trap, "joiner": joiner,
+            "pools": pools}

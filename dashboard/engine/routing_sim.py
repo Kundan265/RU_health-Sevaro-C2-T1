@@ -20,6 +20,8 @@ def expected_calls(ref: dict, coverage: dict, n: int = SIM_CALLS) -> list[str]:
     s = coverage["surges"].set_index("hospital_id")
     w = {hid: max(r["mean"], r["last_60_min"] if r["surge"] else 0) for hid, r in s.iterrows()}
     total = sum(w.values())
+    if total <= 0:
+        return []
     quota = {h: v / total * n for h, v in w.items()}
     alloc = {h: int(q) for h, q in quota.items()}
     for h in sorted(quota, key=lambda h: quota[h] - alloc[h], reverse=True)[: n - sum(alloc.values())]:
@@ -79,7 +81,7 @@ def trap_comparison(state, ref, coverage, joiner) -> dict:
     after = simulate(state, ref, coverage, joiner, restrict=True)
     j = joiner["physician_id"]
     jb, ja = before[before["physician_id"] == j].iloc[0], after[after["physician_id"] == j].iloc[0]
-    return {"unrestricted": before, "restricted": after, "total_calls": SIM_CALLS,
+    return {"unrestricted": before, "restricted": after, "total_calls": len(expected_calls(ref, coverage)),
             "joiner_unrestricted": int(jb["calls"]), "joiner_unrestricted_hospitals": jb["hospitals"],
             "joiner_restricted": int(ja["calls"]), "joiner_restricted_hospitals": ja["hospitals"],
             "seed": int(ja["seed"] or 0), "unrouted_restricted": after.attrs["unrouted"]}

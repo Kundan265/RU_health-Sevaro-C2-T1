@@ -40,20 +40,30 @@ def detect_surges(events: pd.DataFrame, ref: dict, now: pd.Timestamp) -> pd.Data
                   & (events["event_time"] <= now)]
     counts = recv.groupby("hospital_id")["consult_id"].nunique()
     hour = f"{now.hour:02d}:00"
-    base = ref["baseline"][ref["baseline"]["hour_start_et"] == hour].set_index("hospital_id")
+    base = ref["baseline"][ref["baseline"]["hour_start_et"] == hour]
+    if "dow_type" in base.columns:
+        matching = base[base["dow_type"] == ("weekend" if now.dayofweek >= 5 else "weekday")]
+        # The supplied demo contains weekday rows only; retain that synthetic baseline after rebasing.
+        if len(matching):
+            base = matching
+        else:
+            base = base.drop_duplicates("hospital_id")
+    base = base.set_index("hospital_id")
     rows = []
     for hid in ref["hospitals"]["hospital_id"]:
         n = int(counts.get(hid, 0))
         p90 = float(base.loc[hid, "p90_consults"]) if hid in base.index else float("inf")
         mean = float(base.loc[hid, "mean_consults"]) if hid in base.index else 0.0
-        rows.append({"hospital_id": hid, "last_60_min": n, "p90": p90, "mean": mean, "surge": n > p90})
+        rows.append({"hospital_id": hid, "last_60_min": n, "p90": p90, "mean": mean, "surge": n > p90, "baseline_source": "supplied synthetic baseline; weekday only if weekend unavailable"})
     return pd.DataFrame(rows)
 
 
-def checkpoints(now: pd.Timestamp, horizon_min: int = HORIZON_MIN) -> list[pd.Timestamp]:
+def checkpoints(now: pd.Timestamp, horizon_min: int = HORIZON_MIN,
+                boundaries=()) -> list[pd.Timestamp]:
     end = now + pd.Timedelta(minutes=horizon_min)
-    pts = {now}
-    t = now.floor("30min") + pd.Timedelta(minutes=30)
+    pts = {now, end}
+    pts.update(t for t in boundaries if now <= t <= end)
+    t = now.tz_convert("UTC").floor("30min").tz_convert(now.tz) + pd.Timedelta(minutes=30)
     while t <= end:
         pts.add(t)
         t += pd.Timedelta(minutes=30)
@@ -93,10 +103,18 @@ def project(state: dict, ref: dict, extra_shifts: list[dict] | None = None) -> d
     free_now = set(phys.loc[phys["available_for_routing"], "physician_id"])
     names = ref["hospitals"].set_index("hospital_id")["hospital_name"]
 
+    boundaries = [t for s in shifts for t in (s["start"], s["end"])]
+    end = now + pd.Timedelta(minutes=HORIZON_MIN)
+    for day in pd.date_range(now.normalize(), end.normalize(), freq="D"):
+        for block in ref["coverage"]["time_block_et"].unique():
+            for hhmm in block.split("-"):
+                boundaries.append(pd.Timestamp(f"{day:%Y-%m-%d} {hhmm}").tz_localize(
+                    now.tz, ambiguous=False, nonexistent="shift_forward"))
+    points = checkpoints(now, boundaries=boundaries)
     rows = []
     for hid in ref["hospitals"]["hospital_id"]:
         surge = bool(surges.loc[hid, "surge"])
-        for t in checkpoints(now):
+        for t in points:
             staffed = sorted(s["physician_id"] for s in shifts
                              if s["start"] <= t < s["end"] and hid in s["hospitals"]
                              and s["physician_id"] not in unavailable)

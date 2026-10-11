@@ -1,0 +1,445 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>C2 Edge-Case Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: case-file viewer — case list on the left, one case file on the right: Scenario → Features → Workflow swimlane → Timed steps → Chart → Resolution procedure */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#141b2b; --muted:#5b6578; --line:#d9dee7; --soft:#e9edf3;
+  --accent:#2747b8; --accent-soft:#e3e9fb;
+  --crit:#c2322b; --crit-soft:#fbe7e5; --warn:#a86400; --warn-soft:#fbf0dc; --ok:#1f7a4d; --ok-soft:#e2f3ea;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1420; --surface:#171e2d; --ink:#e7ebf3; --muted:#9aa4b8; --line:#2a3347; --soft:#20283a;
+  --accent:#8ea6ff; --accent-soft:#232f55;
+  --crit:#ff7a70; --crit-soft:#3a1f22; --warn:#f2b34c; --warn-soft:#382c17; --ok:#5fd194; --ok-soft:#173326; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#171e2d; --ink:#e7ebf3; --muted:#9aa4b8; --line:#2a3347; --soft:#20283a;
+  --accent:#8ea6ff; --accent-soft:#232f55;
+  --crit:#ff7a70; --crit-soft:#3a1f22; --warn:#f2b34c; --warn-soft:#382c17; --ok:#5fd194; --ok-soft:#173326; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:18px;padding-block:24px 60px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(26px,4vw,38px);font-weight:800;line-height:1.1}
+h2{font-size:clamp(22px,3vw,28px);font-weight:800;line-height:1.15}
+h3{font-size:13px;font-family:var(--f-mono);font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{max-width:72ch;color:var(--muted);margin:8px 0 0}
+.mono{font-family:var(--f-mono);font-size:.9em}
+header{display:grid;gap:6px;margin-bottom:18px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+nav.cases{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:grid;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px}
+@media (max-width:860px){nav.cases{position:static;grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto}}
+nav.cases button{all:unset;cursor:pointer;display:grid;grid-template-columns:30px minmax(0,1fr);gap:6px;align-items:baseline;padding:8px 10px;border-radius:8px;font-size:14px}
+nav.cases button .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+nav.cases button .ph{grid-column:2;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+nav.cases button:hover{background:var(--soft)}
+nav.cases button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+nav.cases button[aria-selected="true"]{background:var(--accent);color:var(--surface)}
+nav.cases button[aria-selected="true"] .n,nav.cases button[aria-selected="true"] .ph{color:var(--surface);opacity:.85}
+
+.file{display:grid;gap:14px;min-width:0}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;gap:10px;min-width:0}
+.title-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:var(--accent-soft);color:var(--accent)}
+.answer{font-size:16.5px;max-width:75ch;margin:0}
+.scenario{background:var(--soft);border-radius:10px;padding:14px 16px;max-width:none}
+.scenario p{margin:0;max-width:80ch}
+.trap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.trap{grid-template-columns:1fr}}
+.trap div{border-radius:10px;padding:12px 14px;font-size:14px}
+.trap .bad{background:var(--crit-soft)} .trap .good{background:var(--ok-soft)}
+.trap b{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.trap .bad b{color:var(--crit)} .trap .good b{color:var(--ok)}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}
+.feat div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;min-width:0}
+.feat .k{font-family:var(--f-mono);font-size:11.5px;color:var(--accent);display:block;margin-bottom:2px;word-break:break-word}
+
+.lane-wrap{overflow-x:auto;border-radius:10px;background:var(--soft);padding:10px}
+.lane-wrap svg{display:block;height:auto}
+.steps{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+.steps-wrap{overflow-x:auto}
+.steps th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.steps td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.steps td.i{font-family:var(--f-mono);color:var(--muted);width:32px}
+.steps td.t{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;width:86px}
+.steps td.a{white-space:nowrap;width:130px}
+.who{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;font-weight:500}
+.steps .rule{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+.fig{background:var(--soft);border-radius:10px;padding:14px;overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:320px}
+.cap{font-size:12.5px;color:var(--muted);margin:0}
+.res{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:760px){.res{grid-template-columns:1fr}}
+.res .box{border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.res .box.end{background:var(--ok-soft);border-color:transparent}
+.res h4{margin:0 0 6px;font-family:var(--f-display);font-size:15px}
+ol.proc,ul.br{margin:0;padding-left:20px;font-size:14px} ol.proc li,ul.br li{margin:4px 0}
+.pager{display:flex;justify-content:space-between;gap:10px}
+.pager button{font:500 14px var(--f-body);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.pager button:focus-visible{outline:2px solid var(--accent)}
+.pager button[disabled]{opacity:.4;cursor:default}
+
+/* svg tokens */
+.t{fill:var(--ink);font-family:var(--f-body);font-size:12px}
+.tm{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.tb{fill:var(--ink);font-family:var(--f-display);font-weight:700;font-size:13px}
+.ax{stroke:var(--line);stroke-width:1}
+.grid{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3}
+.bar-a{fill:var(--accent)} .bar-m{fill:var(--muted);opacity:.45}
+.bar-c{fill:var(--crit)} .bar-w{fill:var(--warn)} .bar-o{fill:var(--ok)}
+.ln-c{stroke:var(--crit);stroke-width:2} .ln-w{stroke:var(--warn);stroke-width:2;stroke-dasharray:5 3}
+.ln-a{stroke:var(--accent);stroke-width:2}
+.bx{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.bx-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.bx-o{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.bx-c{fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.2}
+.bx-w{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.2}
+.arr{stroke:var(--muted);stroke-width:1.4;fill:none}
+.ah{fill:var(--muted)}
+.lane-bg{fill:var(--surface)} .lane-sep{stroke:var(--line);stroke-width:1}
+.rg{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+.rg th,.rg td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center;font-variant-numeric:tabular-nums}
+.rg th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.rg td:first-child,.rg th:first-child{text-align:left}
+.rg tr.win td{background:var(--ok-soft)}
+.p{color:var(--ok);font-weight:600} .x{color:var(--crit);font-weight:700} .q{color:var(--muted)}
+.rank{display:grid;gap:5px;font-size:13.5px}
+.rank div{display:grid;grid-template-columns:28px 78px minmax(0,1fr);gap:8px;align-items:baseline;background:var(--surface);border-radius:6px;padding:6px 10px}
+.rank .sev{font-family:var(--f-mono);font-size:11px}
+.rank .c{color:var(--crit)} .rank .w{color:var(--warn)}
+.rank .hl{outline:2px solid var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kpi{background:var(--surface);border-radius:8px;padding:10px 12px}
+.kpi .v{font-family:var(--f-display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi .v small{color:var(--muted);font-weight:500;font-size:15px}
+.kpi .k{font-size:12.5px;color:var(--muted)}
+footer{margin-top:28px;color:var(--muted);font-size:12.5px;max-width:90ch}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Sevaro Challenge 2 · Team 1 · Neuro Ops Command Center</span>
+  <h1>Edge-case case files</h1>
+  <p class="lede">One file per handbook edge case. Each file runs in the same order: the scenario from our data, the features that handle it, who does what (swimlane), the timed step sequence with the rule applied at each step, a chart, and the resolution procedure with the alternative branches. All data is synthetic; "now" is 18:20 on Tue 17 Mar 2026 unless the test file moves it to 18:27.</p>
+  <div class="legend" aria-label="Actor colours">
+    <span><i class="sw" style="background:var(--muted)"></i>Event feed</span>
+    <span><i class="sw" style="background:var(--accent)"></i>Engine (automatic)</span>
+    <span><i class="sw" style="background:var(--warn)"></i>Coordinator</span>
+    <span><i class="sw" style="background:var(--crit)"></i>Clinical Lead (approver)</span>
+    <span><i class="sw" style="background:var(--ok)"></i>Doctors</span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="cases" role="tablist" aria-label="Edge cases" id="nav"></nav>
+  <main class="file" id="file" role="tabpanel" aria-live="polite"></main>
+</div>
+
+<footer>Sources: Challenge 2 Handbook ch. 2, 5, 6; <span class="mono">DECISIONS.md</span>; <span class="mono">engine/replay.py · decide.py · act.py · coverage.py · routing_sim.py</span>; <span class="mono">acceptance_checklist.md</span>; Test Report for <span class="mono">c2_new_events.csv</span> (11 Oct 2026); <span class="mono">sevaro_application_explained.pdf</span>; Question Status report. Thresholds are synthetic hackathon values, not Sevaro settings or clinical guidance. "—" in the time column means the step runs on every recompute rather than at one clock time.</footer>
+</div>
+
+<script>
+var LANES={feed:{n:"Event feed",c:"--muted"},engine:{n:"Engine",c:"--accent"},coord:{n:"Coordinator",c:"--warn"},appr:{n:"Clinical Lead",c:"--crit"},doc:{n:"Off-duty doctor",c:"--ok"},onshift:{n:"On-shift doctor",c:"--ok"}};
+
+var CHART={
+surge:'<svg viewBox="0 0 520 230" role="img" aria-label="Surge rule and Suncrest projection"><text class="tb" x="10" y="18">A · The rule (handbook example)</text><line class="ax" x1="40" y1="170" x2="240" y2="170"/><rect class="bar-m" x="60" y="130" width="60" height="40"/><rect class="bar-c" x="150" y="30" width="60" height="140"/><line class="ln-w" x1="40" y1="110" x2="240" y2="110"/><text class="tm" x="238" y="104" text-anchor="end">own p90</text><text class="tb" x="90" y="124" text-anchor="middle">2</text><text class="tb" x="180" y="24" text-anchor="middle">7</text><text class="t" x="90" y="188" text-anchor="middle">normal hour</text><text class="t" x="180" y="188" text-anchor="middle">last 45 min</text><text class="tm" x="40" y="214">over own p90 → minimum +1</text><text class="tb" x="280" y="18">B · Suncrest (SYN-005), surge-raised min = 2</text><g><rect class="bx-o" x="280" y="40" width="70" height="50" rx="6"/><text class="tb" x="315" y="62" text-anchor="middle">19:00</text><text class="tm" x="315" y="80" text-anchor="middle">2 / 2</text><rect class="bx-c" x="360" y="40" width="70" height="50" rx="6"/><text class="tb" x="395" y="62" text-anchor="middle">20:00</text><text class="tm" x="395" y="80" text-anchor="middle">short</text><rect class="bx-o" x="440" y="40" width="70" height="50" rx="6"/><text class="tb" x="475" y="62" text-anchor="middle">20:00</text><text class="tm" x="475" y="80" text-anchor="middle">after accept</text></g><text class="t" x="280" y="116">19:00: PHY-005 + PHY-011 (night start) = 2</text><text class="t" x="280" y="134">20:00: below 2 → gap → split-shift card</text><text class="t" x="280" y="152">PHY-009 accepts → "Short in 2 h" 2 → 0</text><text class="tm" x="280" y="186">Northfield follows the same path at 20:00.</text></svg>',
+shift:'<svg viewBox="0 0 520 210" role="img" aria-label="Shift-change timeline"><rect class="bx-a" x="40" y="30" width="440" height="22" rx="3"/><text class="tm" x="46" y="45">120-min projection (ours) 18:20 → 20:20</text><rect class="bx-w" x="40" y="58" width="330" height="18" rx="3"/><text class="tm" x="46" y="71">90-min minimum (brief)</text><line class="ax" x1="40" y1="104" x2="480" y2="104"/><g class="tm"><text x="40" y="122" text-anchor="middle">18:20</text><text x="187" y="122" text-anchor="middle">19:00</text><text x="407" y="122" text-anchor="middle">20:00</text><text x="480" y="122" text-anchor="middle">20:20</text></g><line class="ln-a" x1="40" y1="92" x2="40" y2="112"/><line class="ln-c" x1="187" y1="88" x2="187" y2="112"/><line class="ln-c" x1="407" y1="88" x2="407" y2="112"/><text class="t" x="187" y="144" text-anchor="middle">2 doctors leave · Ramirez among them</text><text class="tm" x="187" y="160" text-anchor="middle">+1 night start (PHY-011)</text><text class="t" x="407" y="144" text-anchor="middle">4 doctors leave</text><text class="tm" x="407" y="160" text-anchor="middle">+1 night start (PHY-012)</text><text class="tm" x="40" y="194">Ramirez at 18:27: 33 min left, 3 open consults, 2 unfinished notes → critical</text></svg>',
+cred:'<svg viewBox="0 0 440 200" role="img" aria-label="Scarcity cost comparison"><text class="tb" x="20" y="22">CON-2200 at Westbridge (SYN-012): who takes it?</text><text class="t" x="20" y="62">PHY-003 Ramirez</text><text class="tm" x="20" y="77">3 open · 14 this shift</text><rect class="bar-o" x="160" y="52" width="90" height="22" rx="3"/><text class="tb" x="258" y="68">cost 1</text><text class="tm" x="160" y="90">strands SYN-005</text><text class="t" x="20" y="132">PHY-001 Patel</text><text class="tm" x="20" y="147">1 open · 12 this shift</text><rect class="bar-c" x="160" y="122" width="180" height="22" rx="3"/><text class="tb" x="348" y="138">cost 2</text><text class="tm" x="160" y="160">strands SYN-006 + SYN-008</text><text class="tm" x="20" y="190">Load-only routing picks PHY-001. Our rule picks PHY-003. Network cost 2 → 1.</text></svg>',
+signal:'<svg viewBox="0 0 460 262" role="img" aria-label="Ordered state ladder"><rect class="bx-c" x="10" y="8" width="440" height="28" rx="5"/><text class="t" x="22" y="27">1 · Synapse video on</text><text class="tm" x="438" y="27" text-anchor="end">BUSY</text><rect class="bx-c" x="10" y="42" width="440" height="28" rx="5"/><text class="t" x="22" y="61">2 · Synapse call in / out</text><text class="tm" x="438" y="61" text-anchor="end">BUSY</text><rect class="bx-c" x="10" y="76" width="440" height="28" rx="5"/><text class="t" x="22" y="95">3 · "Temporarily Unavailable"  ← PHY-008 at 18:12:40</text><text class="tm" x="438" y="95" text-anchor="end">NOT ROUTABLE</text><rect class="bx-w" x="10" y="110" width="440" height="28" rx="5"/><text class="t" x="22" y="129">4 · Camera on, no Synapse, not "In Meeting" ← PHY-001</text><text class="tm" x="438" y="129" text-anchor="end">BUSY+FLAG</text><rect class="bx-o" x="10" y="144" width="440" height="28" rx="5"/><text class="t" x="22" y="163">5 · Writing a note</text><text class="tm" x="438" y="163" text-anchor="end">AVAILABLE</text><rect class="bx-o" x="10" y="178" width="440" height="28" rx="5"/><text class="t" x="22" y="197">6 · Status "In Meeting"</text><text class="tm" x="438" y="197" text-anchor="end">AVAILABLE</text><rect class="bx" x="10" y="216" width="440" height="38" rx="5"/><text class="t" x="22" y="232">Overlay: heartbeat lost ← PHY-007 at 17:38</text><text class="tm" x="22" y="247">"Desktop agent offline: availability unverified"</text></svg>',
+stuck:'<svg viewBox="0 0 460 200" role="img" aria-label="CON-2110 waited 13 minutes against 3 and 8"><text class="tb" x="20" y="22">CON-2110 · Stroke · "Assigned, hospital hasn\'t reached doctor"</text><line class="ax" x1="40" y1="110" x2="440" y2="110"/><rect class="bar-c" x="40" y="70" width="390" height="30" rx="3"/><line class="ln-w" x1="130" y1="54" x2="130" y2="120"/><line class="ln-c" x1="280" y1="54" x2="280" y2="120"/><text class="tm" x="130" y="48" text-anchor="middle">warn 3</text><text class="tm" x="280" y="48" text-anchor="middle">critical 8</text><text class="tb" x="400" y="91" text-anchor="end" style="fill:var(--surface)">13 min</text><g class="tm"><text x="40" y="128" text-anchor="middle">0</text><text x="130" y="128" text-anchor="middle">3</text><text x="280" y="128" text-anchor="middle">8</text><text x="430" y="128" text-anchor="middle">13</text></g><text class="tm" x="20" y="150">Stroke limits (warn / critical): triaged no doctor 5/10 · assigned 3/8 ·</text><text class="tm" x="20" y="166">imaging pending 12/20 · imaging review 6/12 · note 30/45 (general 45/90)</text><text class="tm" x="20" y="190">Scale: 30 px per minute. Clock starts at the event_time that entered the stage.</text></svg>',
+nobody:'<div class="rank" role="list"><div><span class="mono">#1</span><span class="sev c">CRITICAL</span><span>CON-2112 stuck at Imaging Review → escalate</span></div><div><span class="mono">#2</span><span class="sev c">CRITICAL</span><span>CON-2102 imaging pending → auto alert</span></div><div><span class="mono">#3</span><span class="sev c">CRITICAL</span><span>CON-2110 stuck at Assigned → reassign</span></div><div><span class="mono">#4</span><span class="sev c">CRITICAL</span><span>Ramirez leaves in 33 min, 2 notes → auto alert</span></div><div><span class="mono">#5</span><span class="sev w">WARNING</span><span>CON-2114 no doctor → escalate</span></div><div class="hl"><span class="mono">#6</span><span class="sev w">WARNING</span><span>CON-2120 (new) no doctor → escalate</span></div><div><span class="mono">#7</span><span class="sev w">WARNING</span><span>CON-2111 stuck at Documentation → auto alert</span></div><div><span class="mono">#8</span><span class="sev w">WARNING</span><span>Suncrest short at 20:00 → split shift</span></div></div>',
+dup:'<svg viewBox="0 0 460 210" role="img" aria-label="Arrival order versus event order"><text class="tb" x="20" y="20">As they arrive</text><text class="tb" x="270" y="20">As the engine replays</text><rect class="bx" x="20" y="34" width="200" height="26" rx="4"/><text class="tm" x="30" y="51">EVT-01165 triaged 18:23:10</text><rect class="bx-c" x="20" y="66" width="200" height="26" rx="4"/><text class="tm" x="30" y="83">EVT-01165 again (same id)</text><rect class="bx-w" x="20" y="98" width="200" height="26" rx="4"/><text class="tm" x="30" y="115">EVT-01168 lands 4m10s late</text><rect class="bx-o" x="270" y="34" width="180" height="26" rx="4"/><text class="tm" x="280" y="51">EVT-01165 · 18:23:10</text><rect class="bx-o" x="270" y="66" width="180" height="26" rx="4"/><text class="tm" x="280" y="83">EVT-01168 · its own time</text><path class="arr" d="M220 47 H268"/><path class="arr" d="M220 111 C244 111 240 79 268 79"/><line class="ln-c" x1="40" y1="79" x2="200" y2="79"/><text class="tm" x="122" y="140" text-anchor="middle">dropped</text><text class="t" x="20" y="166">Removed once: EVT-00529, EVT-01165</text><text class="t" x="20" y="184">Placed by event_time: EVT-01161, EVT-01168</text><text class="tm" x="20" y="202">CON-2120 triage clock stays at 18:23:10</text></svg>',
+elig:'<table class="rg"><thead><tr><th>Doctor</th><th>Opted in</th><th>Cred. at gap</th><th>10 h rest</th><th>≤60 h / 7 d</th><th>No clash</th><th>Worth ≥2 h</th><th>Result</th></tr></thead><tbody><tr class="win"><td><b>PHY-009</b> Okafor</td><td class="p">✓</td><td class="p">✓</td><td class="p">11.3 h</td><td class="p">36+3=39</td><td class="p">✓</td><td class="p">2.75 h</td><td class="p">Eligible</td></tr><tr><td>PHY-010 Alvarez</td><td class="p">✓</td><td class="x">✗</td><td class="p">22.3 h</td><td class="p">24+3=27</td><td class="p">✓</td><td class="p">2.8 h</td><td class="x">Not at a gap</td></tr><tr><td>PHY-011 Cho</td><td class="p">✓</td><td class="p">✓</td><td class="p">11.3 h</td><td class="p">48+3=51</td><td class="x">19:00 shift</td><td class="p">3.0 h</td><td class="x">Clash</td></tr><tr><td>PHY-012 Haddad</td><td class="x">✗</td><td class="q">·</td><td class="p">34.3 h</td><td class="p">36+3=39</td><td class="x">20:00 shift</td><td class="p">3.0 h</td><td class="x">Not opted in</td></tr><tr><td>PHY-013 Brennan</td><td class="x">✗</td><td class="q">·</td><td class="p">22.3 h</td><td class="p">48+3=51</td><td class="p">✓</td><td class="p">2.67 h</td><td class="x">Not opted in</td></tr><tr><td>PHY-014 Menon</td><td class="p">✓</td><td class="q">·</td><td class="p">22.3 h</td><td class="x">59+3=62</td><td class="p">✓</td><td class="p">2.33 h</td><td class="x">Over hours</td></tr></tbody></table>',
+swamp:'<svg viewBox="0 0 440 200" role="img" aria-label="Joiner share of next 20 calls"><text class="tb" x="20" y="22">PHY-009\'s share of the next 20 calls (test-file run)</text><line class="ax" x1="170" y1="40" x2="170" y2="150"/><text class="t" x="160" y="66" text-anchor="end">Default routing</text><text class="tm" x="160" y="81" text-anchor="end">count 0, all creds</text><rect class="bar-c" x="170" y="56" width="220" height="24" rx="3"/><text class="tb" x="398" y="73">11</text><text class="tm" x="170" y="96">across 4 hospitals</text><text class="t" x="160" y="122" text-anchor="end">Our routing</text><text class="tm" x="160" y="137" text-anchor="end">seed 14, gap only</text><rect class="bar-o" x="170" y="112" width="100" height="24" rx="3"/><text class="tb" x="278" y="129">5</text><text class="tm" x="170" y="152">at 1 hospital</text><g class="tm"><text x="170" y="176" text-anchor="middle">0</text><text x="270" y="176" text-anchor="middle">5</text><text x="370" y="176" text-anchor="middle">10</text></g><text class="tm" x="20" y="196">Reference scenario: 10 → 5. Deterministic model, not production routing.</text></svg>',
+offer:'<svg viewBox="0 0 790 250" role="img" aria-label="Offer state machine" style="min-width:640px"><defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0 L10 5 L0 10z"/></marker></defs><rect class="bx-a" x="10" y="100" width="130" height="44" rx="6"/><text class="t" x="75" y="120" text-anchor="middle">Proposed</text><text class="tm" x="75" y="136" text-anchor="middle">coordinator</text><rect class="bx-w" x="180" y="100" width="140" height="44" rx="6"/><text class="t" x="250" y="120" text-anchor="middle">Pending approval</text><text class="tm" x="250" y="136" text-anchor="middle">Clinical Lead</text><rect class="bx-w" x="180" y="10" width="140" height="44" rx="6"/><text class="t" x="250" y="30" text-anchor="middle">Pending backup</text><text class="tm" x="250" y="46" text-anchor="middle">leadership chain</text><rect class="bx-c" x="180" y="196" width="140" height="44" rx="6"/><text class="t" x="250" y="222" text-anchor="middle">Rejected</text><rect class="bx-a" x="370" y="100" width="130" height="44" rx="6"/><text class="t" x="435" y="120" text-anchor="middle">Sent (simulated)</text><text class="tm" x="435" y="136" text-anchor="middle">expires 10 min</text><rect class="bx-o" x="560" y="10" width="190" height="40" rx="6"/><text class="t" x="655" y="28" text-anchor="middle">Accepted → coverage on</text><text class="tm" x="655" y="42" text-anchor="middle">others → cancelled_gap_filled</text><rect class="bx" x="560" y="62" width="190" height="34" rx="6"/><text class="t" x="655" y="84" text-anchor="middle">Declined → next needs approval</text><rect class="bx" x="560" y="108" width="190" height="34" rx="6"/><text class="t" x="655" y="130" text-anchor="middle">Expired → late reply ignored</text><rect class="bx-w" x="560" y="154" width="190" height="40" rx="6"/><text class="t" x="655" y="172" text-anchor="middle">2nd acceptor</text><text class="tm" x="655" y="186" text-anchor="middle">"already filled", both logged</text><rect class="bx-c" x="560" y="206" width="190" height="34" rx="6"/><text class="t" x="655" y="228" text-anchor="middle">Nobody left → escalate</text><path class="arr" marker-end="url(#m)" d="M140 122 H178"/><path class="arr" marker-end="url(#m)" d="M250 100 V56"/><text class="tm" x="256" y="82">no answer 5 min</text><path class="arr" marker-end="url(#m)" d="M320 32 C350 32 360 110 368 116"/><path class="arr" marker-end="url(#m)" d="M320 122 H368"/><text class="tm" x="324" y="114">approve</text><path class="arr" marker-end="url(#m)" d="M250 144 V194"/><text class="tm" x="256" y="174">reject</text><path class="arr" marker-end="url(#m)" d="M500 112 C530 112 530 30 558 30"/><path class="arr" marker-end="url(#m)" d="M500 118 C530 118 530 79 558 79"/><path class="arr" marker-end="url(#m)" d="M500 125 H558"/><path class="arr" marker-end="url(#m)" d="M500 132 C530 132 530 174 558 174"/><path class="arr" marker-end="url(#m)" d="M750 79 C778 79 778 223 752 223" stroke-dasharray="4 3"/></svg>',
+upload:'<div class="kpis"><div class="kpi"><div class="v"><small>1,163 →</small> 1,171</div><div class="k">unique events (9 rows, 1 duplicate)</div></div><div class="kpi"><div class="v"><small>18:20 →</small> 18:27</div><div class="k">scenario clock</div></div><div class="kpi"><div class="v"><small>18 →</small> 19</div><div class="k">open consults</div></div><div class="kpi"><div class="v"><small>#1 →</small> off top</div><div class="k">CON-2105 after PHY-008 picks it up</div></div><div class="kpi"><div class="v"><small>escalate →</small> reassign</div><div class="k">CON-2110 fix after PHY-001 frees</div></div><div class="kpi"><div class="v"><small>again →</small> +0</div><div class="k">same file re-uploaded</div></div></div>'
+};
+
+var CASES=[
+{id:"e1",n:"01",title:"A sudden rush at one hospital",phase:"Detect",
+ answer:"Each hospital is compared with its own normal busy level for that hour. Busier than that means surge, its minimum doctor count goes up by one, and the projection shows where that creates a gap.",
+ scenario:"Suncrest Medical Pavilion (SYN-005) has had more consults in the last hour than its own p90 for that hour of day. Its minimum goes from 1 to 2 available credentialed doctors. At 19:00 it still meets 2 (PHY-005 plus night doctor PHY-011). At 20:00 it falls below 2. Northfield (SYN-008) goes short at 20:00 too.",
+ bad:"A fixed rule such as \"more than 5 consults an hour\" misses a small hospital doubling and false-alarms on a big one. Two hospitals can surge at once.",
+ good:"Per-hospital, per-hour p90 from 12 weeks of history, in ET. The surge is assumed to last the full 2-hour window. Weekend falls back to weekday baseline and says so.",
+ features:[["coverage.py","Trailing 60-min count vs p90, raised minimum, 120-min projection grid"],["baseline_hourly_volume.csv","Normal and p90 consults per hospital per ET hour"],["coverage_requirements.csv","Base minimum per hospital per time block"],["Dashboard · coverage projection","Hospital × time grid; future columns = scheduled credentialed headcount"]],
+ steps:[
+  ["—","feed","consult_received events land at Suncrest","Counted by event_time, not arrival order"],
+  ["18:20","engine","Count Suncrest consults in the last 60 min","Window = now − 60 min to now"],
+  ["18:20","engine","Compare with Suncrest's p90 for this ET hour","Count > p90 → surge"],
+  ["18:20","engine","Raise Suncrest minimum 1 → 2 for the whole horizon","Surge minimum = base + 1"],
+  ["18:20","engine","Project 19:00: PHY-005 + PHY-011 = 2, meets","Scheduled night start counts from 19:00"],
+  ["18:20","engine","Project 20:00: below 2 → gap; same for Northfield","Gap = fewer than the minimum"],
+  ["18:20","engine","Rank \"Suncrest will be short at 20:00\" with fix: split shift","Gap → split shift if anyone eligible, else escalate"],
+  ["18:21","coord","Open the gap card; read reason and projection",""],
+  ["18:21","coord","Click Propose offer → continues in file 08 and 10",""]],
+ chart:"surge",cap:"A: handbook example of the rule (2/h normal, 7 in 45 min; p90 line illustrative). B: what the engine concluded for Suncrest in the 18:20 scenario.",
+ end:"Suncrest and Northfield gaps are covered by PHY-009's accepted split shift. \"Short in 2 h\" drops from 2 to 0 (test report, screenshot 11).",
+ proc:["Coordinator tab → expand the coverage projection.","Find the red 20:00 cells for Suncrest and Northfield; hover shows minimum vs available.","Open the gap problem card; confirm the reason line says the minimum was raised by a surge.","Click Propose offer (see file 08)."],
+ branches:["Nobody eligible for a split shift → recommendation becomes Escalate.","Surge ends in new data → minimum returns to base on the next recompute; the gap may disappear."]},
+
+{id:"e2",n:"02",title:"Doctors leaving while it's busy",phase:"Detect",
+ answer:"The engine looks 120 minutes ahead at every shift boundary, and separately flags any doctor who is about to leave with two or more unfinished notes.",
+ scenario:"At 18:27 Dr. Sofia Ramirez (PHY-003) has 33 minutes left, 3 open consults, and 2 notes not finished. At 19:00 two doctors leave and night doctor PHY-011 starts. At 20:00 four leave and PHY-012 starts.",
+ bad:"Looking only at now hides the 20:00 drop. A leaving doctor keeps getting new calls and walks away with unsigned notes.",
+ good:"Projection checks every half hour, every shift start and end, every hospital-rule boundary and the exact 120-min endpoint. Shift times come from the roster file, so changed shifts in new data just work.",
+ features:[["coverage.py · shift_roster()","Who is on at each future checkpoint, including scheduled starts"],["detect.py · shift_end problem","2+ unfinished notes within 60 min of shift end"],["decide.py · kind shift_end","Automatic internal alert, no approval"],["Regression test","SYN-008 08:07 gap in the 06:27 scenario, previously missed"]],
+ steps:[
+  ["18:27","engine","Ramirez: minutes_to_shift_end = 33","From physicians_on_shift.csv"],
+  ["18:27","engine","Count her consults in Note Pending or Documentation = 2","Rule: 2+ within 1 h of shift end → critical"],
+  ["18:27","engine","Rank #4 critical; send automatic internal alert","Low-risk step, no approver needed"],
+  ["18:28","coord","Read alert: \"protect Dr. Ramirez from new calls so notes finish\"",""],
+  ["18:28","coord","Hold new routing away from PHY-003",""],
+  ["18:28–19:00","onshift","Ramirez finishes the two notes",""],
+  ["18:27","engine","Projection: credentialed headcount at 19:00 and 20:00","Checkpoints at every boundary to 20:27"],
+  ["18:27","engine","Suncrest and Northfield short at 20:00 → gap problems","Hand-off to file 01 and 08"]],
+ chart:"shift",cap:"Sample-day shift changes (Handbook ch. 6). The 21:00 leave is outside the window from 18:20.",
+ end:"Notes are signed before PHY-003 logs off, and the 20:00 gaps are already in the split-shift flow 90+ minutes early.",
+ proc:["Coordinator tab → ranked list → open \"Dr. Sofia Ramirez leaves in 33 min\".","Read open consults and which are notes.","Stop assigning new calls to her (operational step outside the tool).","Expand coverage projection to confirm 20:00 gaps."],
+ branches:["Notes not finished by shift end → consults stay open on the list with their clocks running.","Shift times differ in new data → projection re-reads the roster; nothing is hard-coded."]},
+
+{id:"e3",n:"03",title:"Free, but not approved there",phase:"Decide",
+ answer:"Credentials are a hard gate. Among credentialed, free doctors, the engine picks the one whose move leaves the fewest other hospitals with nobody.",
+ scenario:"Controlled demo file credential_preservation_events.csv adds CON-2200 at Westbridge (SYN-012). Two doctors pass the gates: PHY-003 Ramirez (3 open, 14 this shift) and PHY-001 Patel (1 open, 12 this shift). Patel is the last eligible doctor for SYN-006 and SYN-008. Ramirez is the last for SYN-005.",
+ bad:"Pick the least-busy free doctor (Patel). Westbridge is covered, but two other at-risk hospitals now have nobody.",
+ good:"Gate first, then sort by scarcity cost, then open consults, then shift count, then ID. Ramirez costs 1, Patel costs 2.",
+ features:[["decide.py · reassign_candidates()","Gates + scarcity cost per candidate"],["credentialing_matrix.csv","Doctor × hospital approvals"],["Dashboard · Eligible reassignment alternatives","Table with cost and stranded hospitals per candidate"],["act.py · reassign()","Writes the assignment, handoff packet and notice"]],
+ steps:[
+  ["—","feed","CON-2200 arrives at SYN-012, no doctor",""],
+  ["—","engine","Gate: credentialed at SYN-012","No credential → never shown"],
+  ["—","engine","Gate: routable, not current holder, >30 min left","Busy, ringing or leaving soon → out"],
+  ["—","engine","Survivors: PHY-003, PHY-001",""],
+  ["—","engine","For each at-risk hospital, find its sole remaining eligible doctor","At-risk = gap now/soon, unassigned, or failed routing"],
+  ["—","engine","Cost: PHY-003 = 1 (SYN-005), PHY-001 = 2 (SYN-006, SYN-008)","Lower cost wins"],
+  ["—","engine","Recommend Reassign to PHY-003 with alternatives table",""],
+  ["—","coord","Click Reassign","No approval needed (coordinator decides)"],
+  ["—","engine","Write physician_assigned; build handoff packet","Packet keeps original stage-entry time"],
+  ["—","onshift","PHY-003 acknowledges (urgent target 1 min)","Late ack is logged, deadline not reset"]],
+ chart:"cred",cap:"Bar length = scarcity cost. One controlled counterexample from supplied credentials; not a claim of global optimality.",
+ end:"CON-2200 goes to Ramirez. SYN-006 and SYN-008 keep Patel as their remaining option. Cost 2 → 1.",
+ proc:["Upload demo/credential_preservation_events.csv from the 18:20 reference.","Open CON-2200 → expand Eligible reassignment alternatives and scarce coverage.","Compare the two rows; read the stranded-hospital column.","Click Reassign → open Complete handoff context."],
+ branches:["No credentialed doctor free → Escalate (file 06).","Only one candidate → cost is shown but there is no choice to make."]},
+
+{id:"e4",n:"04",title:"\"Available\" isn't always available",phase:"Detect",
+ answer:"Doctor state is worked out from call, video, camera, heartbeat and status signals in a fixed order. Self-set status is one clue, never the answer.",
+ scenario:"PHY-007's desktop agent stopped reporting at 17:38; routing still rang him at 18:19:40. PHY-008 went Temporarily Unavailable at 18:12:40 while still holding stroke CON-2110. PHY-001's camera is on with no Synapse session and status not In Meeting. In the test file, PHY-001's camera-off arrives 4 min 10 s late.",
+ bad:"Trust \"Available\": PHY-001 gets routed calls while on an outside video call, and PHY-008 counts toward coverage while unreachable.",
+ good:"Ordered ladder (chart). Unavailable doctors don't count toward coverage. Agent offline shows as \"Unverified\". A late event re-replays in time order and can change a decision.",
+ features:[["replay.py · derive_state()","Ordered signal ladder, risk flags"],["Dashboard · Doctor activity","Derived state next to self-reported status, agent column, availability"],["detect.py · signal problem","\"Signals disagree\" flag"],["coverage.py","Temporarily Unavailable not counted"]],
+ steps:[
+  ["17:38","feed","PHY-007 agent_heartbeat_lost",""],
+  ["17:38","engine","Flag PHY-007: availability unverified","Shown as \"Unverified (agent offline)\""],
+  ["18:12:40","feed","PHY-008 status → Temporarily Unavailable",""],
+  ["18:12:40","engine","PHY-008 not routable, not counted for coverage; still holds CON-2110","Ladder rung 3"],
+  ["18:20","engine","PHY-001: camera on, no Synapse, not In Meeting → busy + flag","Ladder rung 4"],
+  ["18:20","coord","Doctor table shows derived vs self-reported; alert: verify PHY-001",""],
+  ["18:2x","feed","EVT-01168 PHY-001 camera_inactive arrives 4m10s late",""],
+  ["18:27","engine","Replay in event_time order → PHY-001 Available, flag cleared","Order by event_time, not ingested_at"],
+  ["18:27","engine","Knock-on: CON-2110 fix escalate → reassign to Dr. Maya Patel","Decisions recompute, not just display"]],
+ chart:"signal",cap:"First matching rung wins. Order from replay.py; rules from Handbook ch. 5.",
+ end:"PHY-001 becomes the reassignment target for CON-2110. PHY-007 stays visibly unverified. PHY-008's held consult is caught by the stage timer (file 05).",
+ proc:["Coordinator tab → expand Doctor activity (derived from signals).","Compare derived_state with self_reported_status per row.","Read the risk_flags column and the availability column.","After upload, re-check: PHY-001 Available, flag gone."],
+ branches:["Agent comes back online → flag clears on next replay.","Doctor holding a consult goes unavailable → stage timer still runs and escalates the consult."]},
+
+{id:"e5",n:"05",title:"A consult stuck at one step",phase:"Detect",
+ answer:"Every stage gets its own clock from the moment it started, measured against the stroke or general limit for that stage.",
+ scenario:"Stroke CON-2110 was assigned to PHY-008, who went Temporarily Unavailable at 18:12:40. The hospital never reached him. At 18:20 it has sat in \"Assigned\" for 13 minutes against an 8-minute critical limit. Separately, phone-only CON-2111's note clock started at call end 17:45:50: 34 minutes at 18:20, a stroke note warning.",
+ bad:"Timing from when records arrived, restarting the clock when a doctor changes, or starting the note clock when writing begins.",
+ good:"Clock = now − event_time of the stage-entry event. Note clock starts at the later of call end or video end. Doctor activity and consult stage are separate tables.",
+ features:[["replay.py","Stage entry time per consult, from event_time"],["detect.py","Warn / critical thresholds by stage and type"],["pathway.py · handoff packet","Carries original stage-entry time across reassignment"],["Dashboard · Open consults","Stage, time in stage, routing failures"]],
+ steps:[
+  ["≈18:07","feed","physician_assigned CON-2110 → PHY-008","Stage = Assigned; clock starts"],
+  ["≈18:10","engine","3 min in Assigned → warning","Stroke assigned 3 / 8"],
+  ["18:12:40","feed","PHY-008 → Temporarily Unavailable","Clock keeps running"],
+  ["≈18:15","engine","8 min → critical",""],
+  ["18:20","engine","Rank CON-2110 critical; look for a reassignment","Imaging-stage delays get \"chase imaging\" instead"],
+  ["18:20","engine","No credentialed doctor free → escalate",""],
+  ["18:27","engine","After test file, PHY-001 is free → reassign to Dr. Maya Patel",""],
+  ["18:27","coord","Click Reassign",""],
+  ["18:27","engine","Handoff packet keeps stage entry ≈18:07; PHY-008 auto-notified","\"CON-2110 was reassigned from you at …\""]],
+ chart:"stuck",cap:"CON-2110 at 18:20. Stage-entry time is approximate here (18:20 minus 13 min); the engine uses the exact event_time.",
+ end:"CON-2110 moves to PHY-001 with its true age intact. PHY-008 gets a notice with only the consult ID and time.",
+ proc:["Ranked list → open CON-2110.","Read time in stage vs the 8-min limit and the holder's state.","If recommendation is Reassign, click it; if Escalate, send to Clinical Lead.","Open Complete handoff context and check stage_entered_at is unchanged."],
+ branches:["Stuck at imaging (CON-2102) → automatic alert to chase imaging, no reassignment.","Note overdue → alert to the doctor holding it."]},
+
+{id:"e6",n:"06",title:"Nobody can take the call",phase:"Decide",
+ answer:"When routing keeps failing and no credentialed doctor is free, the engine ranks the stuck consults, recommends escalation, and explains why reassign and split shift don't fit.",
+ scenario:"Stroke CON-2105 at SYN-010 was triaged and routing failed three times (retry every 5 min). At 18:20 it has waited 10 min 55 s against a 10-minute critical limit: #1 on the list. In the test file the 4th routing attempt fails, then PHY-008 comes back, is assigned CON-2105 and the hospital calls him at 18:26:55.",
+ bad:"Treat each failed retry as a new problem, or show a wall of red with no order.",
+ good:"Failures accumulate on the same consult. Rank by severity, stroke first, time over limit. Fix explains why not reassign and why not split shift.",
+ features:[["detect.py · rank","Severity, type, time against limit"],["decide.py · recommend()","Reassign → else escalate; why_not lists each credentialed doctor's state"],["act.py · propose_escalation()","Escalation proposal to the approver"],["Dashboard · ranked problems","Title, reason, fix, approver"]],
+ steps:[
+  ["—","feed","consult_received + consult_triaged CON-2105",""],
+  ["—","feed","routing_attempt_failed ×3, 5 min apart","Same consult_id → one patient"],
+  ["18:20","engine","Failures = 3; triaged 10:55 > 10 → critical #1",""],
+  ["18:20","engine","Reassign candidates at SYN-010: none free","why_not lists each doctor's derived state"],
+  ["18:20","engine","Split shift needs ≥15 min to get online → too slow for this patient",""],
+  ["18:20","engine","Recommend Escalate; approver = Clinical Lead",""],
+  ["18:21","coord","Click Escalate → ESC proposal",""],
+  ["18:21–18:26","appr","Authorize","No answer in 5 min → backup approver"],
+  ["18:2x","feed","4th failure; PHY-008 Available; assigned CON-2105","Failure count 3 → 4"],
+  ["18:26:55","feed","Hospital calls PHY-008 → Provider Contacted",""],
+  ["18:27","engine","CON-2105 drops off the top; CON-2112 now #1",""]],
+ chart:"nobody",cap:"Ranked list at 18:27 after the test file. Before the upload, CON-2105 was #1. New stroke CON-2120 enters at #6.",
+ end:"CON-2105 reaches a doctor (Provider Contacted 18:26:55) with all 4 failures still on record. The list re-ranks on its own.",
+ proc:["Open the #1 problem; read the why and why-not lines.","Click Escalate; switch to Clinical Lead tab and authorize.","Upload the test file; confirm CON-2105 shows PHY-008 and Provider Contacted.","Check the new #1 and act on it."],
+ branches:["Approver silent 5 min → offer moves to backup approver.","A credentialed doctor frees up → recommendation flips to Reassign on next recompute."]},
+
+{id:"e7",n:"07",title:"The same patient, twice",phase:"Detect",
+ answer:"Records are replayed in the order they happened and each event_id is counted once. Different consult IDs are never merged.",
+ scenario:"The test file brings new stroke CON-2120 at Suncrest: received, triaged at 18:23:10 (EVT-01165), routing fails. EVT-01165 arrives a second time. EVT-01168 (PHY-001 camera off) arrives 4 min 10 s after it happened.",
+ bad:"Count the copy as a second patient, restart CON-2120's triage clock, or apply the late camera-off in arrival order and leave PHY-001 marked busy.",
+ good:"Dedupe by event_id; sort by event_time; never merge different consult_ids on a guess. A repeat on the same consult keeps its first clock and moves up.",
+ features:[["replay.py","Sort by event_time, dedupe by event_id"],["ingestion.py","Upload merge is idempotent by event_id"],["Dashboard footer","\"N duplicates removed, N late events placed\" with IDs"],["check_snapshot.py","18:20 rebuild matches reference: 18 consults, 8 doctors, 0 mismatches"]],
+ steps:[
+  ["18:2x","feed","EVT-01164 consult_received CON-2120, Stroke, SYN-005",""],
+  ["18:23:10","feed","EVT-01165 consult_triaged CON-2120","Triage clock starts"],
+  ["18:2x","feed","EVT-01165 arrives again",""],
+  ["18:27","engine","Same event_id already seen → drop","Duplicates list: EVT-00529, EVT-01165"],
+  ["18:2x","feed","EVT-01166 routing fails","Failure count 1"],
+  ["18:2x","feed","EVT-01168 arrives 4m10s after its event_time",""],
+  ["18:27","engine","Re-sort by event_time and replay","Late list: EVT-01161, EVT-01168"],
+  ["18:27","engine","Open consults 18 → 19; CON-2120 clock still 18:23:10","New consult_id = new patient"],
+  ["18:27","coord","Footer shows duplicate and late counts with IDs",""]],
+ chart:"dup",cap:"From the c2_new_events.csv run (test report checks 5, 6, 9; screenshot 07).",
+ end:"CON-2120 exists once with the right clock. PHY-001 is correctly Available. The rush at Suncrest is not hidden by merging.",
+ proc:["Upload the file from the sidebar.","Read the data-handling caption under Open consults.","Open CON-2120 and confirm stage_entered_at 18:23:10.","Fix before judging: Question Status N1 describes a patient_id approach the code doesn't use."],
+ branches:["Hospital re-calls with the same consult_id → same patient, ranks higher, clock not reset.","Re-call with a new consult_id → treated as a new patient (never merged on a guess)."]},
+
+{id:"e8",n:"08",title:"Who can be called in",phase:"Decide",
+ answer:"Every off-duty doctor is checked against every rule, with the reason shown. Only someone who passes all of them can be offered a shift; if nobody does, escalate.",
+ scenario:"Six off-duty doctors at 18:20, offer window 18:20–21:20 (after the test file: 18:30–21:30). Exactly one passes: Dr. Grace Okafor (PHY-009), online 15 min after start. The others each fail one or more rules.",
+ bad:"Pick whoever looks closest, or bend a rule (a 62-hour week, a shift that clashes) to fill the gap.",
+ good:"Seven rules per doctor. If several pass: most gap hospitals → fastest online → fewest 7-day hours → fewest recent declines.",
+ features:[["decide.py · eligibility()","Doctor × rule table with reasons and ranking"],["physicians_off_shift_roster.csv","Opt-in, last/next shift, hours, minutes to online"],["act.py · offer_counts()","Open offers and offers this week, from offers the tool sent"],["Dashboard · split-shift eligibility","Every doctor, every rule, pass/fail reason"]],
+ steps:[
+  ["18:20","engine","Gap hospitals = projected gaps + short-now with waiting consult","Suncrest, Northfield (Oak Valley at 18:20)"],
+  ["18:20","engine","Offer window = now rounded up to 5 min, +3 h","18:20–21:20"],
+  ["18:20","engine","Check 6 doctors × 7 rules","Table below"],
+  ["18:20","engine","Only PHY-009 passes; online ≈18:35","3 h − 15 min = 2.75 h ≥ 2 h"],
+  ["18:21","coord","Review table, every reason visible",""],
+  ["18:21","coord","Click Propose to PHY-009","→ file 10"]],
+ chart:"elig",cap:"Computed from the roster for 18:20–21:20. \"·\" = see app's table; it doesn't change the result. Offer limits (1 open, ≤3/week) pass for everyone at the start.",
+ end:"One valid candidate, PHY-009, proposed with the full considered/excluded list attached to the offer for the audit log.",
+ proc:["Coordinator tab → gap problem → expand split-shift eligibility.","Read each failed rule's reason.","Click Propose offer for the top-ranked eligible doctor.","Check the proposal shows hospitals, window, online time and rationale."],
+ branches:["Nobody passes → Escalate, never bend a rule.","PHY-009 declines or expires → excluded for the day; next eligible needs a new approval; nobody left → escalate."]},
+
+{id:"e9",n:"09",title:"The extra doctor gets swamped",phase:"Act",
+ answer:"The new doctor is routable only at the gap hospitals and starts with the team's median consult count instead of zero.",
+ scenario:"PHY-009 accepts and joins 18:45–21:30. Under default routing she has 0 consults this shift, so she is first in line at every hospital she's credentialed for.",
+ bad:"Rule 4 (fewest consults first) hands her nearly every call everywhere. Her own gap hospitals still wait, and the problem moves.",
+ good:"Restrict her to Suncrest and Northfield, and seed her count at 14 (on-shift median). The dashboard shows both outcomes and the effect on everyone else.",
+ features:[["routing_sim.py","Deterministic 20-call routing counterfactual"],["act.py · accepted_shifts","Joiner's hospitals and window; routing_limited_to"],["Dashboard · trap comparison","Default vs protected allocation"],["DECISIONS.md","Split-shift trap rule"]],
+ steps:[
+  ["18:2x","doc","PHY-009 taps Accept",""],
+  ["18:2x","engine","Add accepted shift: online 18:45, ends 21:30","Hospitals = the offer's gap hospitals"],
+  ["18:2x","engine","Set routing scope = gap hospitals only","Other hospitals cannot route to her"],
+  ["18:2x","engine","Seed consults_this_shift = 14","On-shift median"],
+  ["18:2x","engine","Simulate next 20 calls both ways","Default 11 across 4 hospitals; ours 5 at 1"],
+  ["18:2x","coord","Read comparison panel",""]],
+ chart:"swamp",cap:"Test-file run. Reference scenario shows 10 → 5.",
+ end:"PHY-009 takes the calls the gap hospitals need, not the whole network's. Other doctors keep their normal share.",
+ proc:["After acceptance, open Projected coverage.","Expand the split-shift trap comparison.","Confirm the joiner row says routable only at the gap hospitals.","Read default vs protected call counts."],
+ branches:["A second gap opens elsewhere → it needs its own offer; the joiner's scope does not widen silently."]},
+
+{id:"e10",n:"10",title:"Approvals and safety",phase:"Act",
+ answer:"A person approves every offer, the message carries no patient details, and every reply (late, missing or clashing) has a defined outcome that is logged.",
+ scenario:"OFR-0001 to Dr. Grace Okafor for Suncrest and Northfield, 18:30–21:30. It waits for the Clinical Lead, is sent (simulated) to her phone, expires in 10 minutes if unanswered, and she accepts.",
+ bad:"Auto-send offers, include the consult or stroke in the text, let two doctors both fill the same gap, or accept a reply after expiry.",
+ good:"State machine below. Every transition is its own timestamped event. One open offer per doctor, ≤3 a week. First acceptance wins.",
+ features:[["act.py · ActionStore","Offer lifecycle, timers, append-only audit log"],["act.py · build_offer_message()","Hospitals, hours, start time only; asserts no CON-, stroke, patient, NIHSS"],["Dashboard · Clinical Lead tab","Approve or reject in one step, considered-candidate list"],["Dashboard · Off-shift neurologist","Phone screen: Accept or Decline"]],
+ steps:[
+  ["18:27","coord","Propose OFR-0001 → pending approval","Approver retained even if config changes"],
+  ["18:27–18:32","appr","Approve","No answer in 5 min → backup (leadership chain)"],
+  ["approval","engine","Status sent; expires_at = +10 min; log offer_sent_simulated","Message has no patient details"],
+  ["approval","doc","Offer appears on phone: hospitals, hours, be online by 18:45",""],
+  ["≤10 min","doc","Tap Accept","After expiry → late_reply_ignored"],
+  ["accept","engine","Log accepted + coverage_activated","Other open offers for same hospitals → cancelled_gap_filled"],
+  ["accept","engine","Projection recomputes: Short in 2 h 2 → 0",""],
+  ["accept","coord","Audit log shows the full loop; CSV download",""]],
+ chart:"offer",cap:"Timers from act.py: approval timeout 5 min, offer expiry 10 min, first acceptance wins.",
+ end:"Gap filled with a logged chain: data_loaded → proposed → approved → sent → accepted → coverage_activated (screenshot 12).",
+ proc:["Coordinator: Propose.","Clinical Lead tab: expand considered list, Approve.","Off-shift neurologist tab: select PHY-009, Accept.","Coordinator: confirm 2 → 0 in projection; open Audit log."],
+ branches:["Rejected → nothing sent, gap stays open, logged.","Declined → doctor excluded today; next candidate needs fresh approval.","Two accept → first wins; second told \"already filled\"; both logged.","Nobody left → Escalate."]},
+
+{id:"e11",n:"11",title:"Live upload during the demo",phase:"Act",
+ answer:"The judge's CSV is validated, merged and replayed in the running app, and every problem and fix recomputes without a restart.",
+ scenario:"Judges hand over c2_new_events.csv: 9 rows from 18:21 to 18:27 with a new stroke consult, a duplicate, a late camera-off, a returning doctor and a fourth routing failure.",
+ bad:"Restart the server, append in arrival order, double-count re-uploads, or let a broken file wipe the session.",
+ good:"SHA-256 on file bytes, schema and timestamp checks before any state changes, merge by event_id, re-sort, replay, re-rank, advance the clock to the latest event.",
+ features:[["ingestion.py","Validate 8 columns, types, known hospitals and doctors"],["app.py · base_now()","Now = later of wall clock and latest event_time"],["pipeline.py","Replay → detect → decide on every change"],["Upload cases","first, second, repeat, invalid in docs/submission/upload_cases"]],
+ steps:[
+  ["18:20","coord","Drop the CSV in the sidebar uploader",""],
+  ["18:20","engine","Fingerprint bytes (SHA-256)","Same name and size but new bytes still processes"],
+  ["18:20","engine","Validate schema and timestamps","Invalid → error; events, clock, offers untouched"],
+  ["18:20","engine","Merge by event_id: 8 new, 1 duplicate","1,163 → 1,171"],
+  ["18:20","engine","Sort by event_time; replay the day","Late EVT-01168 lands at its true time"],
+  ["18:27","engine","Clock → 18:27; re-detect and re-rank",""],
+  ["18:27","engine","Decisions change: CON-2110 → reassign; CON-2120 → escalate",""],
+  ["18:27","coord","Act on the new #1",""]],
+ chart:"upload",cap:"Test report: 24/24 engine checks, 0 UI errors, no restart.",
+ end:"The app tells the coordinator what changed and what to do next, as if the events had arrived live.",
+ proc:["Click Reference 18:20 scenario; turn Live clock off; choose Clinical Lead.","Upload the judge CSV from the sidebar.","Read the new event count and clock at the top.","Walk the new ranked list from #1."],
+ branches:["Same file again → +0 events.","Broken file → error shown, nothing changes.","Known risk: Live-clock mode showed 4 short instead of 2; use the reference scenario."]}
+];
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function who(l){var L=LANES[l];return '<span class="who" style="background:color-mix(in srgb, var('+L.c+') 16%, transparent);color:var('+L.c+')">'+L.n+'</span>';}
+
+function swimlane(c){
+  var used=[];Object.keys(LANES).forEach(function(k){if(c.steps.some(function(s){return s[1]===k;}))used.push(k);});
+  var lw=170,lab=90,rh=40,top=40,W=lab+used.length*lw+10,H=top+c.steps.length*rh+10;
+  var x=function(l){return lab+used.indexOf(l)*lw+lw/2;};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Workflow swimlane"><defs><marker id="sm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="ah" d="M0 0 L10 5 L0 10z"/></marker></defs>';
+  used.forEach(function(l,i){var x0=lab+i*lw;s+='<rect class="lane-bg" x="'+(x0+3)+'" y="4" width="'+(lw-6)+'" height="'+(H-8)+'" rx="6"/><text class="tb" x="'+(x0+lw/2)+'" y="26" text-anchor="middle" style="fill:var('+LANES[l].c+')">'+LANES[l].n+'</text>';});
+  c.steps.forEach(function(st,i){
+    var y=top+i*rh+rh/2, cx=x(st[1]);
+    s+='<text class="tm" x="8" y="'+(y+4)+'">'+(i+1)+' · '+esc(st[0])+'</text>';
+    if(i>0){var py=top+(i-1)*rh+rh/2,px=x(c.steps[i-1][1]);
+      if(px===cx)s+='<path class="arr" marker-end="url(#sm)" d="M'+cx+' '+(py+12)+' V'+(y-13)+'"/>';
+      else s+='<path class="arr" marker-end="url(#sm)" d="M'+px+' '+(py+12)+' C'+px+' '+(y)+' '+(cx+(px<cx?-60:60))+' '+y+' '+(cx+(px<cx?-74:74))+' '+y+'"/>';}
+    var txt=st[2].length>24?st[2].slice(0,23)+'…':st[2];
+    s+='<rect x="'+(cx-76)+'" y="'+(y-12)+'" width="152" height="24" rx="12" style="fill:color-mix(in srgb, var('+LANES[st[1]].c+') 14%, var(--surface));stroke:var('+LANES[st[1]].c+');stroke-width:1"/>';
+    s+='<text class="t" x="'+cx+'" y="'+(y+4)+'" text-anchor="middle" style="font-size:11px">'+esc(txt)+'</text>';
+  });
+  return s+'</svg>';
+}
+
+function render(id){
+  var c=CASES.find(function(k){return k.id===id;})||CASES[0], i=CASES.indexOf(c);
+  document.querySelectorAll('nav.cases button').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.id===c.id));b.tabIndex=b.dataset.id===c.id?0:-1;});
+  var h='';
+  h+='<section class="sec"><div class="title-row"><span class="eyebrow">Case '+c.n+'</span><span class="tag">'+c.phase+'</span></div><h2>'+esc(c.title)+'</h2><p class="answer">'+esc(c.answer)+'</p></section>';
+  h+='<section class="sec"><h3>1 · Scenario (from our data)</h3><div class="scenario"><p>'+esc(c.scenario)+'</p></div><div class="trap"><div class="bad"><b>What goes wrong without handling</b>'+esc(c.bad)+'</div><div class="good"><b>What our engine does</b>'+esc(c.good)+'</div></div></section>';
+  h+='<section class="sec"><h3>2 · Features involved</h3><div class="feat">'+c.features.map(function(f){return '<div><span class="k">'+esc(f[0])+'</span>'+esc(f[1])+'</div>';}).join('')+'</div></section>';
+  h+='<section class="sec"><h3>3 · Workflow · who does what</h3><div class="lane-wrap">'+swimlane(c)+'</div><p class="cap">Read top to bottom. Each pill is one step in the table below; arrows show hand-offs between actors.</p></section>';
+  h+='<section class="sec"><h3>4 · Steps and sequence</h3><div class="steps-wrap"><table class="steps"><thead><tr><th>#</th><th>Time</th><th>Actor</th><th>What happens · rule applied</th></tr></thead><tbody>'+c.steps.map(function(s,k){return '<tr><td class="i">'+(k+1)+'</td><td class="t">'+esc(s[0])+'</td><td class="a">'+who(s[1])+'</td><td>'+esc(s[2])+(s[3]?'<span class="rule">'+esc(s[3])+'</span>':'')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
+  h+='<section class="sec"><h3>5 · Chart</h3><div class="fig">'+CHART[c.chart]+'</div><p class="cap">'+esc(c.cap)+'</p></section>';
+  h+='<section class="sec"><h3>6 · Resolution and procedure</h3><div class="res"><div class="box end"><h4>End state</h4><p style="margin:0;font-size:14px">'+esc(c.end)+'</p></div><div class="box"><h4>Procedure (what to click)</h4><ol class="proc">'+c.proc.map(function(p){return '<li>'+esc(p)+'</li>';}).join('')+'</ol></div></div><div class="box" style="border:1px solid var(--line);border-radius:10px;padding:12px 14px"><h4 style="margin:0 0 6px;font-family:var(--f-display);font-size:15px">If it goes another way</h4><ul class="br">'+c.branches.map(function(p){return '<li>'+esc(p)+'</li>';}).join('')+'</ul></div></section>';
+  h+='<div class="pager"><button type="button" id="prev"'+(i===0?' disabled':'')+'>← '+(i>0?CASES[i-1].n+' '+esc(CASES[i-1].title):'Previous')+'</button><button type="button" id="next"'+(i===CASES.length-1?' disabled':'')+'>'+(i<CASES.length-1?CASES[i+1].n+' '+esc(CASES[i+1].title):'Next')+' →</button></div>';
+  var f=document.getElementById('file');f.innerHTML=h;
+  var p=document.getElementById('prev'),n=document.getElementById('next');
+  if(i>0)p.onclick=function(){go(CASES[i-1].id);};
+  if(i<CASES.length-1)n.onclick=function(){go(CASES[i+1].id);};
+  try{localStorage.setItem('c2-case',c.id);}catch(e){}
+}
+function go(id){render(id);try{history.replaceState(null,'','#'+id);}catch(e){}var f=document.getElementById('file');if(f.getBoundingClientRect().top<0)f.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+
+var nav=document.getElementById('nav');
+nav.innerHTML=CASES.map(function(c){return '<button type="button" role="tab" data-id="'+c.id+'" aria-selected="false"><span class="n">'+c.n+'</span><span>'+esc(c.title)+'</span><span class="ph">'+c.phase+'</span></button>';}).join('');
+nav.addEventListener('click',function(e){var b=e.target.closest('button');if(b)go(b.dataset.id);});
+nav.addEventListener('keydown',function(e){var bs=[].slice.call(nav.querySelectorAll('button')),i=bs.indexOf(document.activeElement);if(i<0)return;var k=e.key;if(k==='ArrowDown'||k==='ArrowRight'){e.preventDefault();var t=bs[(i+1)%bs.length];go(t.dataset.id);t.focus();}if(k==='ArrowUp'||k==='ArrowLeft'){e.preventDefault();var t2=bs[(i-1+bs.length)%bs.length];go(t2.dataset.id);t2.focus();}});
+var start=(location.hash||'').slice(1);if(!CASES.some(function(c){return c.id===start;})){try{start=localStorage.getItem('c2-case')||'e1';}catch(e){start='e1';}}
+render(start);
+</script>
+
+</body></html>
